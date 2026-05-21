@@ -1,3 +1,24 @@
+# 3Professores
+
+Projeto Next.js gerado com o scaffold inicial. Este repositório contém um front-end mínimo (placeholder) para que outros membros do time implementem as telas.
+
+Como rodar localmente:
+
+```powershell
+cd my-app
+npm install
+npm run dev
+```
+
+Deploy: o projeto já foi deployado no Vercel (prod). Veja o repositório no GitHub e abra PRs para as mudanças no front-end.
+
+Tarefas recomendadas para o frontend:
+- Implementar layout e header
+- Criar páginas: Home, Sobre, Contato
+- Componentizar elementos reutilizáveis
+- Adicionar testes unitários e E2E
+
+Contribuição: crie branches por feature e abra PRs para revisão.
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
