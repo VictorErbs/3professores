@@ -20,5 +20,5 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
           cd backend/functions
-          npm ci
+          npm install --no-audit --no-fund
           firebase deploy --only functions --token "$FIREBASE_TOKEN"
