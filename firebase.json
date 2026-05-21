@@ -1,5 +1,8 @@
 {
   "database": {
     "rules": "backend/database.rules.json"
+  },
+  "functions": {
+    "source": "backend/functions"
   }
 }
