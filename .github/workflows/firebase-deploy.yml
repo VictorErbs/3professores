@@ -21,4 +21,4 @@ jobs:
         run: |
           cd backend/functions
           npm install --no-audit --no-fund
-          firebase deploy --only functions --token "$FIREBASE_TOKEN"
+          firebase deploy --only functions --project apifaculdade --token "$FIREBASE_TOKEN"
