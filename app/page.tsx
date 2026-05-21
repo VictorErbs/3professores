@@ -1,3 +1,6 @@
+import React from 'react'
+import CreateClientButton from './components/CreateClientButton'
+
 export default function Home() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-white">
@@ -21,25 +24,13 @@ export default function Home() {
           <div className="mt-3 flex gap-3 justify-center">
             <a className="px-3 py-2 bg-slate-200 rounded" href="/login">Entrar</a>
             <a className="px-3 py-2 bg-slate-200 rounded" href="/register">Registrar</a>
-            <button
-              onClick={async () => {
-                try {
-                  const res = await fetch((process.env.NEXT_PUBLIC_FUNCTIONS_BASE_URL || '') + '/clients', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: 'Cliente Exemplo', email: 'ex@ex.com' })
-                  });
-                  if (!res.ok) throw new Error('Erro');
-                  alert('Client created (backend)');
-                } catch (e) { alert('Falha ao criar client: ' + e); }
-              }}
-              className="px-3 py-2 bg-green-400 text-white rounded"
-            >
-              Criar client (via backend)
-            </button>
+            <CreateClientButton />
           </div>
         </div>
       </main>
     </div>
   );
 }
+
+import CreateClientButton from './components/CreateClientButton'
+import React from 'react'
