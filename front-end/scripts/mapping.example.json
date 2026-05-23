@@ -1,0 +1,17 @@
+{
+  "cpf": "cpf",
+  "email": "email",
+  "name": "nome",
+  "phone": "telefone",
+  "contract_number": "numero_contrato",
+  "start_date": "data_inicio",
+  "end_date": "data_fim",
+  "total_value": "valor_total",
+  "installment_number": "parcela_num",
+  "due_date": "vencimento",
+  "amount": "valor",
+  "status": "status",
+  "paid_at": "data_pagamento",
+  "paid_amount": "valor_pago",
+  "delays": "atrasos"
+}
