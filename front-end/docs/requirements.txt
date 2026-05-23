@@ -1,0 +1,33 @@
+
+
+CreditGuard AI: Inteligência Analítica para Recuperação de Crédito e Prevenção de Inadimplência
+Disciplinas
+Engenharia de Requisitos, Ciência de Dados, Tópicos Avançados em SI e Resolução de Problemas Estruturados em 
+Computação
+Contexto
+Uma grande administradora de consórcios enfrenta um conjunto de problemas críticos:
+
+aumento da inadimplência;
+baixa previsibilidade financeira;
+perda de receita após contemplação;
+dificuldade em priorizar cobranças;
+dashboards desconectados;
+ausência de inteligência preditiva.
+Solução
+A diretoria deseja criar uma plataforma inteligente capaz de:
+
+prever risco de inadimplência;
+identificar clientes críticos;
+otimizar recuperação de crédito;
+apoiar decisões estratégicas;
+melhorar previsibilidade de caixa.
+
+A empresa contratou as equipes como consultorias especializadas em Sistemas de Informação.
+Objetivo
+Projetar uma solução digital inteligente baseada em dados para:
+
+prever inadimplência;
+apoiar recuperação financeira;
+gerar inteligência gerencial;
+melhorar eficiência operacional;
+reduzir perdas financeiras.

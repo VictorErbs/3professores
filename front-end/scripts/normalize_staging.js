@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const fs = require('fs')
+const path = require('path')
 const { createClient } = require('@supabase/supabase-js')
 
 // Load optional mapping file from argv or env
@@ -7,24 +8,38 @@ const mappingPath = process.argv[2] || process.env.MAPPING_FILE
 let mapping = null
 if (mappingPath) {
   try {
-    const content = fs.readFileSync(mappingPath, 'utf8')
+    const basePath = path.normalize(process.cwd())
+    const safeFilename = path.basename(mappingPath)
+    const absolutePath = path.normalize(path.join(basePath, safeFilename))
+    if (!absolutePath.startsWith(basePath)) {
+      throw new Error('Invalid path specified! File must be inside the working directory.')
+    }
+    const content = fs.readFileSync(absolutePath, 'utf8')
     mapping = JSON.parse(content)
-    console.log('Loaded mapping from', mappingPath)
+    console.log('Loaded mapping from', absolutePath)
   } catch (err) {
     console.warn('Could not load mapping file:', mappingPath, err.message)
     mapping = null
   }
 }
 
+function safeGet(obj, key) {
+  if (!obj || typeof key !== 'string') return null
+  if (key === '__proto__' || key === 'constructor' || key === 'prototype') return null
+  return Reflect.get(obj, key)
+}
+
 function getField(raw, field, ...alternatives) {
   if (!raw) return null
-  if (mapping && mapping[field]) {
-    return raw[mapping[field]] ?? null
+  const mappedKey = safeGet(mapping, field)
+  if (mappedKey) {
+    return safeGet(raw, mappedKey) ?? null
   }
   for (const a of alternatives) {
-    if (raw[a] !== undefined && raw[a] !== null && String(raw[a]).trim() !== '') return raw[a]
+    const val = safeGet(raw, a)
+    if (val !== undefined && val !== null && String(val).trim() !== '') return val
   }
-  return raw[field] ?? null
+  return safeGet(raw, field) ?? null
 }
 
 function extractCPF(s) {

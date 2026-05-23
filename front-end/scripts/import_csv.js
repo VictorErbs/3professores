@@ -24,7 +24,13 @@ async function main() {
     auth: { persistSession: false },
   })
 
-  const absolutePath = path.resolve(csvPath)
+  const basePath = path.normalize(process.cwd())
+  const safeFilename = path.basename(csvPath)
+  const absolutePath = path.normalize(path.join(basePath, safeFilename))
+  if (!absolutePath.startsWith(basePath)) {
+    console.error('Invalid path specified! File must be inside the working directory.')
+    process.exit(1)
+  }
   if (!fs.existsSync(absolutePath)) {
     console.error('CSV file not found:', absolutePath)
     process.exit(1)
