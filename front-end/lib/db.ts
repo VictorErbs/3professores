@@ -62,6 +62,12 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 const hasSupabase = !!(supabaseUrl && supabaseServiceRoleKey)
 
+console.log('=== [CreditGuard DB Initialize Log] ===')
+console.log('Database Mode:', hasSupabase ? 'SUPABASE ACTIVE' : 'SIMULATED MOCK ACTIVE')
+console.log('SUPABASE_URL:', supabaseUrl ? 'Set (' + supabaseUrl + ')' : 'NOT SET')
+console.log('SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceRoleKey ? 'Set (Length: ' + supabaseServiceRoleKey.length + ')' : 'NOT SET')
+console.log('=======================================')
+
 const supabase = hasSupabase
   ? createSupabaseClient(supabaseUrl!, supabaseServiceRoleKey!, {
       auth: { persistSession: false },
@@ -106,18 +112,32 @@ export const db = {
   isMock: () => !hasSupabase,
 
   seed: async (force = false) => {
+    console.log('[db.seed] Starting DB seeding check...')
     // Check if seeding is already done or forced
     if (!force && db.isMock() && store.clients.length > 0) {
+      console.log('[db.seed] Mock DB already seeded, skipping.')
       return { message: 'Already seeded (mock)', count: store.clients.length }
     }
 
     if (!db.isMock()) {
-      // If we have Supabase, we can check if it's already seeded
-      const { count } = await supabase!
-        .from('clients')
-        .select('*', { count: 'exact', head: true })
-      if (count && count > 0 && !force) {
-        return { message: 'Database already has data (supabase)', count }
+      try {
+        console.log('[db.seed] Probing Supabase clients table...')
+        const { count, error } = await supabase!
+          .from('clients')
+          .select('*', { count: 'exact', head: true })
+          
+        if (error) {
+          console.error('[db.seed Error probing clients table]:', error)
+          throw error
+        }
+
+        if (count && count > 0 && !force) {
+          console.log('[db.seed] Supabase database has data, skipping seed. Count:', count)
+          return { message: 'Database already has data (supabase)', count }
+        }
+      } catch (err: any) {
+        console.error('[db.seed CRITICAL EXCEPTION during probe]:', err)
+        throw err
       }
     }
 
