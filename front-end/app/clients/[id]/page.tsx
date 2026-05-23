@@ -3,6 +3,9 @@ import React, { useEffect, useState, use } from 'react'
 import Link from 'next/link'
 import Header from '@/components/Header'
 import { useTranslation } from 'react-i18next'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { db } from '@/lib/db'
 
 interface ClientProfile {
   id: string
@@ -31,6 +34,7 @@ interface ClientProfile {
 export default function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { t } = useTranslation()
+  const router = useRouter()
   const [profile, setProfile] = useState<ClientProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -53,7 +57,18 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   }
 
   useEffect(() => {
-    fetchProfile()
+    const checkAuth = async () => {
+      if (!db.isMock()) {
+        const supabase = createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          router.push('/login')
+          return
+        }
+      }
+      fetchProfile()
+    }
+    checkAuth()
   }, [id])
 
   // Recalibrate score in real-time

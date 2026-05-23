@@ -1,12 +1,29 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Header from '@/components/Header'
 import { useTranslation } from 'react-i18next'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { db } from '@/lib/db'
 
 export default function UploadPage() {
   const { t } = useTranslation()
+  const router = useRouter()
   const [csvText, setCsvText] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (!db.isMock()) {
+        const supabase = createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          router.push('/login')
+        }
+      }
+    }
+    checkAuth()
+  }, [])
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error' | ''; message: string }>({
     type: '',
     message: ''

@@ -2,6 +2,9 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import Header from '@/components/Header'
 import { useTranslation } from 'react-i18next'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { db } from '@/lib/db'
 
 interface CollectionItem {
   clientId: string
@@ -29,6 +32,7 @@ interface ClientInstallment {
 
 export default function CollectionsPage() {
   const { t } = useTranslation()
+  const router = useRouter()
   const [queue, setQueue] = useState<CollectionItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -61,7 +65,18 @@ export default function CollectionsPage() {
   }
 
   useEffect(() => {
-    fetchQueue()
+    const checkAuth = async () => {
+      if (!db.isMock()) {
+        const supabase = createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          router.push('/login')
+          return
+        }
+      }
+      fetchQueue()
+    }
+    checkAuth()
   }, [])
 
   // Apply filters in real-time

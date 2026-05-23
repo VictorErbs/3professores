@@ -2,6 +2,9 @@
 import React, { useEffect, useState } from 'react'
 import Header from '@/components/Header'
 import { useTranslation } from 'react-i18next'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { db } from '@/lib/db'
 
 interface KPI {
   totalOverdue: number
@@ -30,6 +33,7 @@ interface ProjectionData {
 
 export default function DashboardPage() {
   const { t } = useTranslation()
+  const router = useRouter()
   const [kpis, setKpis] = useState<KPI | null>(null)
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [projections, setProjections] = useState<ProjectionData[]>([])
@@ -55,7 +59,18 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    fetchDashboardData()
+    const checkAuth = async () => {
+      if (!db.isMock()) {
+        const supabase = createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          router.push('/login')
+          return
+        }
+      }
+      fetchDashboardData()
+    }
+    checkAuth()
   }, [])
 
   const handleResolveAlert = async (alertId: string) => {

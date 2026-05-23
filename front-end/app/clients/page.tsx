@@ -3,6 +3,9 @@ import React, { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import Header from '@/components/Header'
 import { useTranslation } from 'react-i18next'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { db } from '@/lib/db'
 
 interface ClientItem {
   id: string
@@ -20,6 +23,7 @@ interface RiskDetail {
 
 export default function ClientsListPage() {
   const { t } = useTranslation()
+  const router = useRouter()
   const [clients, setClients] = useState<ClientItem[]>([])
   const [riskScores, setRiskScores] = useState<Map<string, RiskDetail>>(new Map())
   const [loading, setLoading] = useState(true)
@@ -71,7 +75,18 @@ export default function ClientsListPage() {
   }
 
   useEffect(() => {
-    fetchClients()
+    const checkAuth = async () => {
+      if (!db.isMock()) {
+        const supabase = createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          router.push('/login')
+          return
+        }
+      }
+      fetchClients()
+    }
+    checkAuth()
   }, [])
 
   // Apply search & filters
