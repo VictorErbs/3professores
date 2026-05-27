@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useRef } from 'react'
 import Header from '@/components/Header'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
@@ -53,6 +53,8 @@ export default function CollectionsPage() {
   const [regionFilter, setRegionFilter] = useState('all')
   const [statusCsvFilter, setStatusCsvFilter] = useState('all')
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // Interactive Panel Modal State
   const [selectedClient, setSelectedClient] = useState<CollectionItem | null>(null)
   const [installments, setInstallments] = useState<ClientInstallment[]>([])
@@ -60,10 +62,13 @@ export default function CollectionsPage() {
   const [negotiationNotes, setNegotiationNotes] = useState('')
   const [actionSuccess, setActionSuccess] = useState('')
 
-  const fetchQueue = async () => {
+  const fetchQueue = async (searchTerm = '') => {
     try {
       setLoading(true)
-      const res = await fetch('/api/collections')
+      const query = searchTerm.trim()
+        ? `/api/collections?search=${encodeURIComponent(searchTerm.trim())}`
+        : '/api/collections'
+      const res = await fetch(query)
       if (!res.ok) throw new Error('Falha ao carregar fila de cobrança')
       const data = await res.json()
       setQueue(data)
@@ -73,6 +78,15 @@ export default function CollectionsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Debounced search: fires 400ms after user stops typing
+  const handleSearchChange = (value: string) => {
+    setSearch(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      fetchQueue(value)
+    }, 400)
   }
 
   useEffect(() => {
@@ -88,21 +102,14 @@ export default function CollectionsPage() {
       fetchQueue()
     }
     checkAuth()
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [])
 
   // Apply filters in real-time
   const filteredQueue = useMemo(() => {
     let result = [...queue]
 
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      result = result.filter(
-        item => 
-          item.name.toLowerCase().includes(q) || 
-          item.cpf.includes(q) || 
-          item.email.toLowerCase().includes(q)
-      )
-    }
+    // Text search is now server-side, so here we only apply the dropdown filters
 
     if (statusFilter !== 'all') {
       result = result.filter(item => item.status === statusFilter)
@@ -127,7 +134,7 @@ export default function CollectionsPage() {
     }
 
     return result
-  }, [search, statusFilter, riskFilter, regionFilter, statusCsvFilter, queue])
+  }, [statusFilter, riskFilter, regionFilter, statusCsvFilter, queue])
 
   const regionOptions = useMemo(() => {
     return Array.from(new Set(queue.map(item => item.clientRegion || 'Sem regiao'))).sort()
@@ -219,7 +226,7 @@ export default function CollectionsPage() {
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder={t('collections.searchPlaceholder')}
               className="w-full rounded-2xl border border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-950 px-4 py-2.5 text-sm focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600"
             />

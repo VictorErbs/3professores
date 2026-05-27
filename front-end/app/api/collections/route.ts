@@ -2,15 +2,60 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const url = new URL(req.url)
+    const search = url.searchParams.get('search')?.trim()
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL
     const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     const supabase = supabaseUrl && supabaseServiceRoleKey
       ? createSupabaseClient(supabaseUrl, supabaseServiceRoleKey, { auth: { persistSession: false } })
       : null
 
-    const clients = await db.clients.list()
+    let clients: any[] = []
+    if (db.isMock()) {
+      clients = await db.clients.list()
+      if (search) {
+        const lower = search.toLowerCase()
+        clients = clients.filter(c => 
+          c.name?.toLowerCase().includes(lower) || 
+          c.email?.toLowerCase().includes(lower) || 
+          c.cpf?.includes(search)
+        )
+      }
+    } else {
+      // Direct REST: list all clients ordered by name
+      let restUrl = `${supabaseUrl}/rest/v1/clients?select=*&order=name.asc`
+      if (search) {
+        const escaped = search.replace(/[%_]/g, '\\$&')
+        restUrl += `&or=(name.ilike.*${encodeURIComponent(escaped)}*,email.ilike.*${encodeURIComponent(escaped)}*,cpf.ilike.*${encodeURIComponent(escaped)}*)`
+      }
+      
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 10000)
+      try {
+        const res = await fetch(restUrl, {
+          signal: controller.signal,
+          cache: 'no-store',
+          headers: {
+            'apikey': supabaseServiceRoleKey!,
+            'Authorization': `Bearer ${supabaseServiceRoleKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'count=none',
+            'Range-Unit': 'items',
+            'Range': '0-9999',
+          },
+        })
+        if (!res.ok) {
+          const text = await res.text()
+          throw new Error(`Supabase error ${res.status}: ${text}`)
+        }
+        clients = await res.json()
+      } finally {
+        clearTimeout(timer)
+      }
+    }
     const contracts = await db.contracts.list()
     const installments = await db.installments.list()
     const riskScores = await db.risk_scores.list()
