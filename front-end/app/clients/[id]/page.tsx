@@ -154,9 +154,11 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const overdueCount = overdueInsts.length
   const totalOverdue = overdueInsts.reduce((acc, i) => acc + i.amount, 0)
   
-  // Find latest risk score
-  const isCritical = overdueCount > 0
-  const computedScore = isCritical ? Math.min(100, 30 + overdueCount * 20) : 15
+  // Use the fetched profile risk scores if available; otherwise fallback heuristic.
+  // (profile.risk_scores is not fetched directly; rely on the predict route or computed score from overdue.)
+  // Fetch latest risk score lazily from /api/predict is already done via button.
+  // For display, use heuristic consistent with the collections/predict API.
+  const computedScore = overdueCount > 0 ? Math.min(100, 30 + overdueCount * 20) : 15
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">

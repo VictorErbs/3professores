@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getAuthedUser } from '@/lib/auth'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -43,6 +44,14 @@ async function supabaseGet(path: string, params?: Record<string, string>) {
 
 export async function GET(req: Request) {
   try {
+    // In Supabase mode, require an authenticated user for data access.
+    if (!db.isMock()) {
+      const user = await getAuthedUser()
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+    }
+
     const url = new URL(req.url)
     const id = url.searchParams.get('id')
 
@@ -134,6 +143,13 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    if (!db.isMock()) {
+      const user = await getAuthedUser()
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+    }
+
     const body = await req.json()
     const { name, email, cpf, phone } = body
 

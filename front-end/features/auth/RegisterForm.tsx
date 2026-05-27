@@ -34,6 +34,7 @@ export default function RegisterForm() {
       });
 
       if (signUpError) throw signUpError;
+
       router.push('/login');
     } catch (err) {
       setError((err as Error).message || t('auth.registerFailed'));
@@ -63,7 +64,9 @@ export default function RegisterForm() {
             required
           />
           <span>
-            Declaro que li e concordo com o tratamento dos meus dados pessoais em conformidade com a <span className="text-blue-600 hover:underline">Política de Privacidade (LGPD)</span> do CreditGuard AI.
+            Declaro que li e concordo com o tratamento dos meus dados pessoais em conformidade com a{' '}
+            <a href="/privacy" className="text-blue-600 hover:underline">Política de Privacidade (LGPD)</a>{' '}
+            do CreditGuard AI.
           </span>
         </label>
 

@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import Header from '@/components/Header'
 import { useTranslation } from 'react-i18next'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { db } from '@/lib/db'
@@ -236,20 +237,20 @@ export default function DashboardPage() {
                          <p className="text-xs text-slate-500">{t('dashboard.priorityEmpty')}</p>
                        ) : (
                          <div className="space-y-2">
-                           {alerts.slice(0, 4).map((alert) => (
-                             <div key={alert.id} className="flex items-center justify-between text-xs">
-                               <span className="text-slate-600 dark:text-slate-300 truncate max-w-[180px]">{alert.message}</span>
-                               <span className={`text-[10px] uppercase font-bold ${
-                                 alert.severity === 'critical'
-                                   ? 'text-rose-600 dark:text-rose-400'
-                                   : alert.severity === 'medium'
-                                   ? 'text-amber-600 dark:text-amber-400'
-                                   : 'text-emerald-600 dark:text-emerald-400'
-                               }`}>
-                                 {alert.severity}
-                               </span>
-                             </div>
-                           ))}
+                        {alerts.slice(0, 4).map((alert) => (
+                              <Link key={alert.id} href={`/clients/${alert.client_id}`} className="flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg px-2 py-1.5 -mx-2 transition">
+                                <span className="text-slate-600 dark:text-slate-300 truncate max-w-[180px]">{alert.message}</span>
+                                <span className={`text-[10px] uppercase font-bold ${
+                                  alert.severity === 'critical'
+                                    ? 'text-rose-600 dark:text-rose-400'
+                                    : alert.severity === 'medium'
+                                    ? 'text-amber-600 dark:text-amber-400'
+                                    : 'text-emerald-600 dark:text-emerald-400'
+                                }`}>
+                                  {alert.severity}
+                                </span>
+                              </Link>
+                            ))}
                          </div>
                        )}
                      </div>
@@ -263,7 +264,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-indigo-100 mt-1 max-w-md">{t('dashboard.actionBannerDesc')}</p>
                   </div>
                   <a
-                    href="/collections"
+                    href="/upload"
                     className="shrink-0 rounded-xl bg-white px-5 py-2.5 text-xs font-extrabold text-indigo-600 hover:bg-slate-50 transition shadow"
                   >
                     {t('dashboard.actionBannerBtn')}
@@ -292,9 +293,10 @@ export default function DashboardPage() {
                   ) : (
                     <div className="space-y-4">
                       {alerts.map((alert) => (
-                        <div
+                        <Link
                           key={alert.id}
-                          className="rounded-2xl border border-slate-100 dark:border-slate-800 p-4 space-y-2 bg-slate-50/50 dark:bg-slate-950/20 hover:border-slate-200 transition"
+                          href={`/clients/${alert.client_id}`}
+                          className="block rounded-2xl border border-slate-100 dark:border-slate-800 p-4 space-y-2 bg-slate-50/50 dark:bg-slate-950/20 hover:border-indigo-200 dark:hover:border-indigo-800 hover:shadow-sm transition"
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-xs text-slate-900 dark:text-white truncate max-w-[130px]">
@@ -318,13 +320,13 @@ export default function DashboardPage() {
                               {t('dashboard.alertsTime', { date: new Date(alert.created_at).toLocaleDateString('pt-BR') })}
                             </span>
                             <button
-                              onClick={() => handleResolveAlert(alert.id)}
+                              onClick={(e) => { e.preventDefault(); handleResolveAlert(alert.id); }}
                               className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 hover:underline transition"
                             >
                               {t('dashboard.alertsArchive')}
                             </button>
                           </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   )}

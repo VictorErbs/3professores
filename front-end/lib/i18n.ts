@@ -11,6 +11,7 @@ const resources = {
         collections: "📞 Fila de Cobrança",
         clients: "👥 Clientes",
         upload: "📤 Ingestão de CSV",
+        privacy: "LGPD",
         online: "Online",
         simulated: "Base Simulada",
         supabase: "Base Supabase",
@@ -225,6 +226,28 @@ const resources = {
         registering: "Criando...",
         loginFailed: "Falha no login",
         registerFailed: "Falha no registro"
+      },
+      privacy: {
+        title: "Política de Privacidade (LGPD)",
+        updatedAt: "Atualizado em {{date}}",
+        intro: "Esta política descreve como o CreditGuard AI coleta e trata dados pessoais para fins de análise de risco e apoio à cobrança.",
+        controllerTitle: "Controlador e contato",
+        controllerBody: "Para este projeto acadêmico, o controlador é a equipe do projeto. Contato: {{email}}.",
+        dataTitle: "Dados coletados",
+        dataBody: "Dados cadastrais (nome, e-mail, telefone, CPF) e dados financeiros/contratuais (contratos, parcelas, pagamentos, status e indicadores).",
+        legalTitle: "Bases legais",
+        legalBody: "Execução de contrato/legítimo interesse (operações de cobrança) e consentimento para criação de conta e uso da plataforma.",
+        rightsTitle: "Direitos do titular",
+        rightsBody: "Confirmação e acesso, correção, anonimização, portabilidade, eliminação, informação sobre compartilhamento e revogação do consentimento.",
+        retentionTitle: "Retenção",
+        retentionBody: "Os dados são mantidos pelo tempo necessário para os objetivos do projeto e podem ser removidos mediante solicitação.",
+        securityTitle: "Segurança",
+        securityBody: "Aplicamos controle de acesso, logs e segregação por ambiente. Evite inserir dados pessoais reais fora do contexto autorizado.",
+        sharingTitle: "Compartilhamento",
+        sharingBody: "Os dados podem ser processados no Supabase para armazenamento e autenticação. Não vendemos dados.",
+        cookiesTitle: "Cookies",
+        cookiesBody: "Usamos cookies estritamente necessários para autenticação e sessão.",
+        back: "Voltar"
       }
     }
   },
@@ -237,6 +260,7 @@ const resources = {
         collections: "📞 Collection Queue",
         clients: "👥 Clients",
         upload: "📤 CSV Ingestion",
+        privacy: "Privacy",
         online: "Online",
         simulated: "Simulated DB",
         supabase: "Supabase DB",
@@ -451,6 +475,28 @@ const resources = {
         registering: "Creating...",
         loginFailed: "Login failed",
         registerFailed: "Registration failed"
+      },
+      privacy: {
+        title: "Privacy Policy (LGPD)",
+        updatedAt: "Updated at {{date}}",
+        intro: "This policy describes how CreditGuard AI collects and processes personal data for risk analysis and collection support.",
+        controllerTitle: "Controller and contact",
+        controllerBody: "For this academic project, the controller is the project team. Contact: {{email}}.",
+        dataTitle: "Data collected",
+        dataBody: "Registration data (name, email, phone, CPF) and financial/contract data (contracts, installments, payments, status and indicators).",
+        legalTitle: "Legal bases",
+        legalBody: "Contract execution/legitimate interest (collection operations) and consent for account creation and platform usage.",
+        rightsTitle: "Data subject rights",
+        rightsBody: "Confirmation and access, correction, anonymization, portability, deletion, information about sharing, and consent withdrawal.",
+        retentionTitle: "Retention",
+        retentionBody: "Data is retained as long as necessary for project objectives and may be removed upon request.",
+        securityTitle: "Security",
+        securityBody: "We apply access control, logs, and environment segregation. Avoid entering real personal data outside authorized context.",
+        sharingTitle: "Sharing",
+        sharingBody: "Data may be processed in Supabase for storage and authentication. We do not sell data.",
+        cookiesTitle: "Cookies",
+        cookiesBody: "We use strictly necessary cookies for authentication and session.",
+        back: "Back"
       }
     }
   }

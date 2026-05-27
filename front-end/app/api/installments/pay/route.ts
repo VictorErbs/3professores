@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getAuthedUser } from '@/lib/auth'
 
 export async function POST(req: Request) {
   try {
+    if (!db.isMock()) {
+      const user = await getAuthedUser()
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+    }
+
     const body = await req.json()
     const installmentId = String(body.installmentId || '')
     const amount = Number(body.amount || 0)

@@ -10,19 +10,20 @@ export default function Header() {
   const { t, i18n } = useTranslation()
 
   useEffect(() => {
-    fetch('/api/clients')
-      .then((res) => {
-        setIsMock(!res.ok)
+    fetch('/api/health', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        setIsMock(data?.dbMode === 'mock')
       })
-      .catch(() => {
-        setIsMock(true)
-      })
+      .catch(() => setIsMock(true))
   }, [])
 
   const navLinks = [
     { href: '/', label: t('header.dashboard') },
     { href: '/collections', label: t('header.collections') },
     { href: '/clients', label: t('header.clients') },
+    { href: '/upload', label: t('header.upload') },
+    { href: '/privacy', label: t('header.privacy') },
   ]
 
   return (

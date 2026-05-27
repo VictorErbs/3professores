@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { db } from '@/lib/db'
+import { getAuthedUser } from '@/lib/auth'
 
 function toNumber(value: unknown) {
   if (value === null || value === undefined || value === '') return 0
@@ -22,6 +23,13 @@ function toDate(value: unknown) {
 
 export async function GET() {
   try {
+    if (!db.isMock()) {
+      const user = await getAuthedUser()
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+    }
+
     // Fetch all operational data
     const clients = await db.clients.list()
     const contracts = await db.contracts.list()
