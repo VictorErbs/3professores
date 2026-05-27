@@ -19,6 +19,11 @@ interface CollectionItem {
   priority: number
   status: 'open' | 'negotiating' | 'recovered' | 'delinquent'
   recommendedAction: string
+  advisoryName?: string | null
+  collectionStatus?: string | null
+  clientRegion?: string | null
+  contemplatedIndicator?: string | null
+  paymentMethod?: string | null
 }
 
 interface ClientInstallment {
@@ -28,6 +33,10 @@ interface ClientInstallment {
   due_date: string
   amount: number
   status: string
+}
+
+function isSyntheticEmail(email: string) {
+  return email.endsWith('@creditguard.local')
 }
 
 export default function CollectionsPage() {
@@ -41,6 +50,8 @@ export default function CollectionsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [riskFilter, setRiskFilter] = useState('all')
+  const [regionFilter, setRegionFilter] = useState('all')
+  const [statusCsvFilter, setStatusCsvFilter] = useState('all')
 
   // Interactive Panel Modal State
   const [selectedClient, setSelectedClient] = useState<CollectionItem | null>(null)
@@ -107,8 +118,24 @@ export default function CollectionsPage() {
       }
     }
 
+    if (regionFilter !== 'all') {
+      result = result.filter(item => (item.clientRegion || 'Sem regiao') === regionFilter)
+    }
+
+    if (statusCsvFilter !== 'all') {
+      result = result.filter(item => (item.collectionStatus || 'Sem status') === statusCsvFilter)
+    }
+
     return result
-  }, [search, statusFilter, riskFilter, queue])
+  }, [search, statusFilter, riskFilter, regionFilter, statusCsvFilter, queue])
+
+  const regionOptions = useMemo(() => {
+    return Array.from(new Set(queue.map(item => item.clientRegion || 'Sem regiao'))).sort()
+  }, [queue])
+
+  const statusCsvOptions = useMemo(() => {
+    return Array.from(new Set(queue.map(item => item.collectionStatus || 'Sem status'))).sort()
+  }, [queue])
 
   // Open interactive panel and load client installments
   const handleOpenActionPanel = async (item: CollectionItem) => {
@@ -135,14 +162,17 @@ export default function CollectionsPage() {
   const handlePayInstallment = async (installmentId: string) => {
     try {
       setActionSuccess('')
-      
-      await fetch('/api/import', {
+      const selectedInstallment = installments.find((inst) => inst.id === installmentId)
+      const res = await fetch('/api/installments/pay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          csvText: `status,paid_at,installment_number\npaid,${new Date().toISOString()},1`
+          installmentId,
+          amount: selectedInstallment?.amount || 0
         })
       })
+
+      if (!res.ok) throw new Error('Falha ao registrar pagamento')
 
       setActionSuccess(t('collections.settledSuccess'))
       // Refresh local installments list
@@ -225,6 +255,30 @@ export default function CollectionsPage() {
                 <option value="low">{t('collections.optionLowRisk')}</option>
               </select>
             </div>
+
+            <div className="w-full sm:w-auto flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Regiao</span>
+              <select
+                value={regionFilter}
+                onChange={(e) => setRegionFilter(e.target.value)}
+                className="w-full rounded-xl border border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-950 px-3 py-2 text-xs font-bold focus:outline-none"
+              >
+                <option value="all">Todas</option>
+                {regionOptions.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+
+            <div className="w-full sm:w-auto flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Status CSV</span>
+              <select
+                value={statusCsvFilter}
+                onChange={(e) => setStatusCsvFilter(e.target.value)}
+                className="w-full rounded-xl border border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-950 px-3 py-2 text-xs font-bold focus:outline-none"
+              >
+                <option value="all">Todos</option>
+                {statusCsvOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -260,7 +314,7 @@ export default function CollectionsPage() {
                     <tr key={item.clientId} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/10 transition-colors duration-150">
                       <td className="px-6 py-4">
                         <div className="font-bold text-slate-900 dark:text-white">{item.name}</div>
-                        <div className="text-xs text-slate-400 mt-0.5">{t('collections.cpfLabel', { cpf: item.cpf, phone: item.phone })}</div>
+                        <div className="text-xs text-slate-400 mt-0.5">{isSyntheticEmail(item.email) ? 'Dados de contato nao estao no XLSX' : t('collections.cpfLabel', { cpf: item.cpf, phone: item.phone })}</div>
                       </td>
                       <td className="px-6 py-4 font-bold text-rose-600 dark:text-rose-400">
                         R$ {item.totalOverdueAmount.toLocaleString('pt-BR')}
@@ -331,9 +385,9 @@ export default function CollectionsPage() {
                 {/* Client Contact Info */}
                 <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/20 text-xs space-y-2">
                   <h4 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-1">{t('collections.drawerContactHeader')}</h4>
-                  <p className="font-medium text-slate-600 dark:text-slate-400">{t('collections.drawerPhone', { phone: selectedClient.phone })}</p>
-                  <p className="font-medium text-slate-600 dark:text-slate-400">{t('collections.drawerEmail', { email: selectedClient.email })}</p>
-                  <p className="font-medium text-slate-600 dark:text-slate-400">{t('collections.drawerCpf', { cpf: selectedClient.cpf })}</p>
+                  <p className="font-medium text-slate-600 dark:text-slate-400">{selectedClient.phone || 'Sem telefone real no XLSX'}</p>
+                  <p className="font-medium text-slate-600 dark:text-slate-400">{isSyntheticEmail(selectedClient.email) ? 'Sem e-mail real no XLSX' : selectedClient.email}</p>
+                  <p className="font-medium text-slate-600 dark:text-slate-400">{isSyntheticEmail(selectedClient.email) ? 'Documento derivado do contrato' : selectedClient.cpf}</p>
                 </div>
 
                 {/* Overdue Installments Settle Section */}

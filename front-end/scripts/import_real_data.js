@@ -2,18 +2,24 @@
 const fs = require('fs')
 const path = require('path')
 const { parse } = require('csv-parse/sync')
-const XLSX = require('xlsx')
 const { createClient } = require('@supabase/supabase-js')
 const { randomUUID } = require('crypto')
 
-const XLSX_FILE = 'assets/fluxo_pagamentos.xlsx'
 const CSV_FILE = 'assets/cobranca_assessorias.csv'
+const INSTALLMENTS_PER_CONTRACT = 6
 
 function toNumber(value) {
   if (value === null || value === undefined || value === '') return null
   const normalized = String(value).replace(/\s/g, '').replace(/R\$/gi, '').replace(/\./g, '').replace(',', '.')
   const n = Number(normalized)
   return Number.isFinite(n) ? n : null
+}
+
+function clampNumber(value, min = 0, max = 100) {
+  if (value === null || value === undefined) return null
+  const n = Number(value)
+  if (!Number.isFinite(n)) return null
+  return Math.min(max, Math.max(min, n))
 }
 
 function parseExcelDate(value) {
@@ -70,25 +76,13 @@ async function main() {
 
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, { auth: { persistSession: false } })
 
-  const xlsxPath = path.join(process.cwd(), XLSX_FILE)
   const csvPath = path.join(process.cwd(), CSV_FILE)
-  if (!fs.existsSync(xlsxPath)) throw new Error(`Arquivo ausente: ${xlsxPath}`)
   if (!fs.existsSync(csvPath)) throw new Error(`Arquivo ausente: ${csvPath}`)
 
   const csvText = fs.readFileSync(csvPath, 'utf8')
   const cobrancaRows = parse(csvText, { columns: true, skip_empty_lines: true, bom: true })
-  const workbook = XLSX.readFile(xlsxPath)
-  const pagamentoRows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: null })
 
   console.log(`CSV cobrança: ${cobrancaRows.length} linhas`)
-  console.log(`XLSX pagamentos: ${pagamentoRows.length} linhas`)
-
-  const csvByContract = new Map()
-  for (const row of cobrancaRows) {
-    const contractNumber = String(row.ID_Contrato || '').trim()
-    if (!contractNumber) continue
-    csvByContract.set(contractNumber, row)
-  }
 
   const clients = []
   const contracts = []
@@ -102,98 +96,103 @@ async function main() {
   const processedContractIds = new Set()
   const clientByContract = new Map()
   const contractIdByNumber = new Map()
-  const installmentIdByKey = new Map()
   const statsByContract = new Map()
   const now = new Date()
 
-  for (const row of pagamentoRows) {
+  for (const row of cobrancaRows) {
     const contractNumber = String(row.ID_Contrato || '').trim()
     if (!contractNumber) continue
-    const installmentNumber = Number(row.Numero_Parcela || 0)
-    const dueDate = toDate(row.Data_Vencimento)
-    const paidDate = toDate(row.Data_Pagamento)
-    const amount = toNumber(row.Valor_Parcela || row.ValorParcela) || 0
-    const paidAmount = toNumber(row.Valor_Pago || row.Valor_Pagma || row.Valor_Pagamento)
-    const paymentMethod = row.Forma_Pagamento || row.FormaPagamento || null
 
-    let status = 'pending'
-    if (paidDate) {
-      status = 'paid'
-    } else if (dueDate && new Date(dueDate) < now) {
-      status = 'overdue'
-    }
+    if (processedContractIds.has(contractNumber)) continue
+    processedContractIds.add(contractNumber)
 
-    if (!processedContractIds.has(contractNumber)) {
-      processedContractIds.add(contractNumber)
+    const syntheticCpf = contractNumber.replace(/\D/g, '').slice(-11).padStart(11, '0')
+    const safeContractNumber = contractNumber.replace(/[^a-zA-Z0-9]/g, '')
+    const clientId = randomUUID()
+    const contractId = randomUUID()
+    clientByContract.set(contractNumber, clientId)
+    contractIdByNumber.set(contractNumber, contractId)
 
-      const syntheticCpf = contractNumber.replace(/\D/g, '').slice(-11).padStart(11, '0')
-      const safeContractNumber = contractNumber.replace(/[^a-zA-Z0-9]/g, '')
-      const clientId = randomUUID()
-      const contractId = randomUUID()
-      clientByContract.set(contractNumber, clientId)
-      contractIdByNumber.set(contractNumber, contractId)
+    clients.push({
+      id: clientId,
+      name: contractNumber,
+      email: `cliente.${safeContractNumber.toLowerCase()}@creditguard.local`,
+      cpf: syntheticCpf,
+      phone: ''
+    })
 
-      clients.push({
-        id: clientId,
-        name: contractNumber,
-        email: `cliente.${safeContractNumber.toLowerCase()}@creditguard.local`,
-        cpf: syntheticCpf,
-        phone: ''
-      })
+    contracts.push({
+      id: contractId,
+      client_id: clientId,
+      contract_number: contractNumber,
+      start_date: null,
+      end_date: null,
+      total_value: null
+    })
 
-      contracts.push({
-        id: contractId,
-        client_id: clientId,
-        contract_number: contractNumber,
-        start_date: null,
-        end_date: null,
-        total_value: null
-      })
+    const collectionStatus = row.Status_Cobranca ? String(row.Status_Cobranca).trim() : null
+    const clientRegion = row.Regiao_Cliente ? String(row.Regiao_Cliente).trim() : null
+    const advisoryName = row.Nome_Assessoria ? String(row.Nome_Assessoria).trim() : null
+    const sentDate = toDate(row.Data_Envio_Assessoria)
+    const daysOverdue = toNumber(row.Dias_Em_Atraso_Inicial) || 0
+    const overdueAmount = toNumber(row.Valor_Inadimplente_Inicial) || 0
+    const riskScore = clampNumber(row.Score_Interno_Risco)
 
-      statsByContract.set(contractNumber, { overdueCount: 0, overdueAmount: 0, maxDaysOverdue: 0 })
+    contractMetadataByNumber.set(contractNumber, {
+      contract_number: contractNumber,
+      advisory_name: advisoryName,
+      collection_status: collectionStatus,
+      client_region: clientRegion,
+      contemplated_indicator: null,
+      payment_method: null,
+    })
 
-      const csv = csvByContract.get(contractNumber)
-      const metadataRow = {
-        contract_number: contractNumber,
-        advisory_name: csv ? String(csv.Nome_Assessoria || '').trim() : null,
-        collection_status: csv ? String(csv.Status_Cobranca || '').trim() : null,
-        client_region: csv ? String(csv.Regiao_Cliente || '').trim() : null,
-        contemplated_indicator: row.Indicador_Contemplado ? String(row.Indicador_Contemplado).trim() : null,
-        payment_method: paymentMethod ? String(paymentMethod).trim() : null,
+    const stats = { overdueCount: 0, overdueAmount: 0, maxDaysOverdue: 0 }
+    const monthlyAmount = Math.round((overdueAmount / INSTALLMENTS_PER_CONTRACT) * 100) / 100
+
+    const baseDate = sentDate ? new Date(sentDate) : new Date(now)
+    const firstDueDate = baseDate
+
+    for (let i = 0; i < INSTALLMENTS_PER_CONTRACT; i++) {
+      const dueDate = new Date(firstDueDate)
+      dueDate.setMonth(dueDate.getMonth() + i)
+
+      let status = 'pending'
+      if (i === 0 && daysOverdue > 0 && dueDate < now) {
+        status = 'overdue'
+        stats.overdueCount += 1
+        stats.overdueAmount += monthlyAmount
+        stats.maxDaysOverdue = Math.max(stats.maxDaysOverdue, daysOverdue)
       }
-      contractMetadataByNumber.set(contractNumber, metadataRow)
-    }
 
-    const installmentKey = `${contractNumber}::${installmentNumber}`
-    let installmentId = installmentIdByKey.get(installmentKey)
-    if (!installmentId) {
-      installmentId = randomUUID()
       installments.push({
-        id: installmentId,
-        contract_id: contractIdByNumber.get(contractNumber),
-        installment_number: installmentNumber,
-        due_date: dueDate,
-        amount,
+        id: randomUUID(),
+        contract_id: contractId,
+        installment_number: i + 1,
+        due_date: dueDate.toISOString().slice(0, 10),
+        amount: monthlyAmount,
         status
       })
-      installmentIdByKey.set(installmentKey, installmentId)
-
-      if (status === 'overdue') {
-        const stat = statsByContract.get(contractNumber)
-        const days = dueDate ? Math.max(0, Math.floor((now.getTime() - new Date(dueDate).getTime()) / 86400000)) : 0
-        stat.overdueCount += 1
-        stat.overdueAmount += amount
-        stat.maxDaysOverdue = Math.max(stat.maxDaysOverdue, days)
-      }
     }
 
-    if (paidDate) {
-      payments.push({
-        id: randomUUID(),
-        installment_id: installmentId,
-        paid_at: `${paidDate}T00:00:00.000Z`,
-        amount: paidAmount ?? amount,
-        method: paymentMethod ? String(paymentMethod) : null
+    statsByContract.set(contractNumber, stats)
+
+    const score = riskScore !== null
+      ? riskScore
+      : Math.min(100, Math.round(stats.overdueCount * 20 + stats.maxDaysOverdue * 0.4))
+
+    riskScores.push({
+      client_id: clientId,
+      score,
+      model: 'csv_real_v1'
+    })
+
+    if (stats.overdueCount > 0) {
+      alerts.push({
+        client_id: clientId,
+        contract_id: contractId,
+        severity: stats.maxDaysOverdue >= 90 ? 'critical' : 'medium',
+        message: `Contrato ${contractNumber}: ${stats.overdueCount} parcela(s) em atraso, max ${stats.maxDaysOverdue} dias, total R$ ${Math.round(stats.overdueAmount).toLocaleString('pt-BR')}`
       })
     }
   }
@@ -235,7 +234,6 @@ async function main() {
   }
 
   await insertInBatches(supabase, 'source_cobranca_assessorias', [], 500)
-  await insertInBatches(supabase, 'source_fluxo_pagamentos', pagamentoRows.map((raw) => ({ raw })), 500)
   await insertInBatches(supabase, 'source_cobranca_assessorias', cobrancaRows.map((raw) => ({ raw })), 500)
   for (const row of contractMetadataByNumber.values()) {
     contractMetadata.push(row)

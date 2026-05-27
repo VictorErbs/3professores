@@ -28,11 +28,11 @@ O objetivo da solução é criar uma plataforma capaz de:
 
 ## Proposta de solução
 
-A solução será baseada em dados enviados pelo professor em 2 arquivos CSV e armazenados no Supabase. A ideia é transformar esses arquivos em uma base estruturada para permitir análise, priorização de cobrança e cálculo de risco.
+A solução será baseada em dados enviados pelo professor em 2 arquivos (`cobranca_assessorias.csv` e `fluxo_pagamentos.xlsx`) e armazenados no Supabase. A ideia é transformar esses arquivos em uma base estruturada para permitir análise, priorização de cobrança e cálculo de risco.
 
 Fluxo proposto:
 
-1. receber os 2 CSVs do professor
+1. receber os 2 arquivos reais do professor (CSV + XLSX)
 2. importar os arquivos para tabelas de staging no Supabase
 3. normalizar os dados em tabelas operacionais
 4. calcular indicadores de risco e comportamento financeiro
@@ -97,10 +97,10 @@ Os 2 CSVs podem ser tratados como origem para estas entidades:
 
 Se os CSVs tiverem colunas diferentes, o mapeamento deverá ser ajustado no momento da importação.
 
-## Como os CSVs entram no Supabase
+## Como os arquivos reais entram no Supabase
 
 1. criar as tabelas definitivas no arquivo `front-end/supabase/schema.sql`
-2. importar os CSVs em tabelas temporárias ou staging
+2. executar a carga dos arquivos `assets/cobranca_assessorias.csv` e `assets/fluxo_pagamentos.xlsx`
 3. validar tipos, duplicidades e campos obrigatórios
 4. mover os dados limpos para as tabelas finais
 5. calcular os indicadores usados pela aplicação
@@ -165,10 +165,19 @@ cd my-app\front-end
 npm run build
 ```
 
-## Próximos passos recomendados
+## Carga oficial no Supabase
 
-1. receber os 2 CSVs do professor e confirmar o cabeçalho de cada arquivo
-2. ajustar o schema do Supabase para refletir as colunas reais
-3. implementar a importação e a limpeza dos dados
-4. trocar a previsão aleatória por uma regra ou modelo simples baseado no histórico
-5. montar o dashboard com prioridade de cobrança e visão executiva
+Com as variáveis de ambiente do Supabase configuradas em `front-end/.env.local`, rode em `front-end/`:
+
+```powershell
+npm install
+npm run import-real-data
+```
+
+O comando `import-real-data`:
+
+1. lê os dois arquivos reais da pasta `assets/`
+2. grava os dados crus em `source_cobranca_assessorias` e `source_fluxo_pagamentos`
+3. recria os dados operacionais em `clients`, `contracts`, `installments`, `payments`, `risk_scores` e `alerts`
+
+Antes da primeira carga, execute o SQL de `front-end/supabase/schema.sql` no Supabase SQL Editor para criar as tabelas e a função `creditguard_reset_and_load`.

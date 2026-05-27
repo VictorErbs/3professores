@@ -68,11 +68,21 @@ console.log('SUPABASE_URL:', supabaseUrl ? 'Set (' + supabaseUrl + ')' : 'NOT SE
 console.log('SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceRoleKey ? 'Set (Length: ' + supabaseServiceRoleKey.length + ')' : 'NOT SET')
 console.log('=======================================')
 
-const supabase = hasSupabase
-  ? createSupabaseClient(supabaseUrl!, supabaseServiceRoleKey!, {
-      auth: { persistSession: false },
-    })
-  : null
+// Factory function: creates a fresh client per call to avoid stuck WebSocket connections
+function getSupabase() {
+  if (!hasSupabase) return null
+  return createSupabaseClient(supabaseUrl!, supabaseServiceRoleKey!, {
+    auth: { persistSession: false },
+    realtime: { timeout: 5000 },
+    global: {
+      fetch: (url, options = {}) => {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 10000)
+        return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer))
+      }
+    }
+  })
+}
 
 // In-Memory Data Store for Mock Mode
 interface MockStore {
@@ -107,6 +117,14 @@ function generateUUID(): string {
     : Math.random().toString(36).substring(2) + Date.now().toString(36)
 }
 
+// Timeout wrapper for Supabase queries
+function withTimeout<T>(promise: Promise<T>, ms = 10000): Promise<T> {
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`Supabase query timed out after ${ms}ms`)), ms)
+  )
+  return Promise.race([promise, timeout])
+}
+
 // Operational wrapper API
 export const db = {
   isMock: () => !hasSupabase,
@@ -122,7 +140,7 @@ export const db = {
     if (!db.isMock()) {
       try {
         console.log('[db.seed] Probing Supabase clients table...')
-        const { count, error } = await supabase!
+        const { count, error } = await getSupabase()!
           .from('clients')
           .select('*', { count: 'exact', head: true })
           
@@ -131,9 +149,15 @@ export const db = {
           throw error
         }
 
-        if (count && count > 0 && !force) {
+        if (count && count > 0) {
           console.log('[db.seed] Supabase database has data, skipping seed. Count:', count)
           return { message: 'Database already has data (supabase)', count }
+        }
+
+        console.log('[db.seed] Supabase mode detected: mock seed disabled.')
+        return {
+          message: 'Supabase mode: no mock seed applied. Import real data with npm run import-real-data.',
+          count: count || 0,
         }
       } catch (err: any) {
         console.error('[db.seed CRITICAL EXCEPTION during probe]:', err)
@@ -178,7 +202,7 @@ export const db = {
       }
 
       if (!db.isMock()) {
-        const { data, error } = await supabase!.from('clients').insert({
+        const { data, error } = await getSupabase()!.from('clients').insert({
           name: rc.name,
           email: rc.email,
           cpf: rc.cpf,
@@ -210,7 +234,7 @@ export const db = {
         }
 
         if (!db.isMock()) {
-          const { data, error } = await supabase!.from('contracts').insert({
+          const { data, error } = await getSupabase()!.from('contracts').insert({
             client_id: clientObj.id,
             contract_number: contractNum,
             start_date: contractObj.start_date,
@@ -260,7 +284,7 @@ export const db = {
           }
 
           if (!db.isMock()) {
-            const { data, error } = await supabase!.from('installments').insert({
+            const { data, error } = await getSupabase()!.from('installments').insert({
               contract_id: contractObj.id,
               installment_number: inst,
               due_date: installmentObj.due_date,
@@ -287,7 +311,7 @@ export const db = {
             }
 
             if (!db.isMock()) {
-              const { error } = await supabase!.from('payments').insert({
+              const { error } = await getSupabase()!.from('payments').insert({
                 installment_id: installmentObj.id,
                 paid_at: paymentObj.paid_at,
                 amount: monthlyAmount,
@@ -326,7 +350,7 @@ export const db = {
       }
 
       if (!db.isMock()) {
-        await supabase!.from('risk_scores').insert({
+        await getSupabase()!.from('risk_scores').insert({
           client_id: clientId,
           score,
           model: 'heuristic_v1'
@@ -347,7 +371,7 @@ export const db = {
         }
 
         if (!db.isMock()) {
-          await supabase!.from('alerts').insert({
+          await getSupabase()!.from('alerts').insert({
             client_id: clientId,
             contract_id: alertObj.contract_id,
             severity: 'critical',
@@ -367,7 +391,7 @@ export const db = {
         }
 
         if (!db.isMock()) {
-          await supabase!.from('alerts').insert({
+          await getSupabase()!.from('alerts').insert({
             client_id: clientId,
             contract_id: alertObj.contract_id,
             severity: 'medium',
@@ -401,7 +425,7 @@ export const db = {
   clients: {
     list: async (): Promise<Client[]> => {
       if (!db.isMock()) {
-        const { data, error } = await supabase!
+        const { data, error } = await getSupabase()!
           .from('clients')
           .select('*')
           .order('name', { ascending: true })
@@ -412,7 +436,7 @@ export const db = {
     },
     get: async (id: string): Promise<Client | null> => {
       if (!db.isMock()) {
-        const { data, error } = await supabase!
+        const { data, error } = await getSupabase()!
           .from('clients')
           .select('*')
           .eq('id', id)
@@ -433,7 +457,7 @@ export const db = {
       }
 
       if (!db.isMock()) {
-        const { data: inserted, error } = await supabase!
+        const { data: inserted, error } = await getSupabase()!
           .from('clients')
           .insert({
             name: clientObj.name,
@@ -455,7 +479,7 @@ export const db = {
   contracts: {
     list: async (): Promise<Contract[]> => {
       if (!db.isMock()) {
-        const { data, error } = await supabase!.from('contracts').select('*')
+        const { data, error } = await getSupabase()!.from('contracts').select('*')
         if (error) throw error
         return data || []
       }
@@ -463,7 +487,7 @@ export const db = {
     },
     getByClient: async (clientId: string): Promise<Contract[]> => {
       if (!db.isMock()) {
-        const { data, error } = await supabase!.from('contracts').select('*').eq('client_id', clientId)
+        const { data, error } = await getSupabase()!.from('contracts').select('*').eq('client_id', clientId)
         if (error) throw error
         return data || []
       }
@@ -481,7 +505,7 @@ export const db = {
       }
 
       if (!db.isMock()) {
-        const { data: inserted, error } = await supabase!
+        const { data: inserted, error } = await getSupabase()!
           .from('contracts')
           .insert({
             client_id: contractObj.client_id,
@@ -504,7 +528,7 @@ export const db = {
   installments: {
     list: async (): Promise<Installment[]> => {
       if (!db.isMock()) {
-        const { data, error } = await supabase!.from('installments').select('*').order('due_date', { ascending: true })
+        const { data, error } = await getSupabase()!.from('installments').select('*').order('due_date', { ascending: true })
         if (error) throw error
         return data || []
       }
@@ -512,7 +536,7 @@ export const db = {
     },
     getByContract: async (contractId: string): Promise<Installment[]> => {
       if (!db.isMock()) {
-        const { data, error } = await supabase!.from('installments').select('*').eq('contract_id', contractId).order('installment_number', { ascending: true })
+        const { data, error } = await getSupabase()!.from('installments').select('*').eq('contract_id', contractId).order('installment_number', { ascending: true })
         if (error) throw error
         return data || []
       }
@@ -530,7 +554,7 @@ export const db = {
       }
 
       if (!db.isMock()) {
-        const { data: inserted, error } = await supabase!
+        const { data: inserted, error } = await getSupabase()!
           .from('installments')
           .insert({
             contract_id: instObj.contract_id,
@@ -550,7 +574,7 @@ export const db = {
     },
     updateStatus: async (id: string, status: 'pending' | 'paid' | 'overdue'): Promise<Installment | null> => {
       if (!db.isMock()) {
-        const { data, error } = await supabase!
+        const { data, error } = await getSupabase()!
           .from('installments')
           .update({ status })
           .eq('id', id)
@@ -572,7 +596,7 @@ export const db = {
   payments: {
     list: async (): Promise<Payment[]> => {
       if (!db.isMock()) {
-        const { data, error } = await supabase!.from('payments').select('*')
+        const { data, error } = await getSupabase()!.from('payments').select('*')
         if (error) throw error
         return data || []
       }
@@ -589,7 +613,7 @@ export const db = {
       }
 
       if (!db.isMock()) {
-        const { data: inserted, error } = await supabase!
+        const { data: inserted, error } = await getSupabase()!
           .from('payments')
           .insert({
             installment_id: payObj.installment_id,
@@ -617,7 +641,7 @@ export const db = {
   risk_scores: {
     list: async (): Promise<RiskScore[]> => {
       if (!db.isMock()) {
-        const { data, error } = await supabase!.from('risk_scores').select('*').order('computed_at', { ascending: false })
+        const { data, error } = await getSupabase()!.from('risk_scores').select('*').order('computed_at', { ascending: false })
         if (error) throw error
         return data || []
       }
@@ -625,7 +649,7 @@ export const db = {
     },
     getLatestByClient: async (clientId: string): Promise<RiskScore | null> => {
       if (!db.isMock()) {
-        const { data, error } = await supabase!
+        const { data, error } = await getSupabase()!
           .from('risk_scores')
           .select('*')
           .eq('client_id', clientId)
@@ -649,7 +673,7 @@ export const db = {
       }
 
       if (!db.isMock()) {
-        const { data: inserted, error } = await supabase!
+        const { data: inserted, error } = await getSupabase()!
           .from('risk_scores')
           .insert({
             client_id: riskObj.client_id,
@@ -670,7 +694,7 @@ export const db = {
   alerts: {
     list: async (): Promise<Alert[]> => {
       if (!db.isMock()) {
-        const { data, error } = await supabase!.from('alerts').select('*').order('created_at', { ascending: false })
+        const { data, error } = await getSupabase()!.from('alerts').select('*').order('created_at', { ascending: false })
         if (error) throw error
         return data || []
       }
@@ -688,7 +712,7 @@ export const db = {
       }
 
       if (!db.isMock()) {
-        const { data: inserted, error } = await supabase!
+        const { data: inserted, error } = await getSupabase()!
           .from('alerts')
           .insert({
             client_id: alertObj.client_id,
@@ -707,7 +731,7 @@ export const db = {
     },
     resolve: async (id: string): Promise<Alert | null> => {
       if (!db.isMock()) {
-        const { data, error } = await supabase!
+        const { data, error } = await getSupabase()!
           .from('alerts')
           .update({ resolved: true })
           .eq('id', id)

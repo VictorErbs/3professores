@@ -41,6 +41,8 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const [predicting, setPredicting] = useState(false)
   const [predictMsg, setPredictMsg] = useState('')
 
+  const isSynthetic = profile?.email?.endsWith('@creditguard.local')
+
   const fetchProfile = async () => {
     try {
       setLoading(true)
@@ -98,16 +100,18 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   // Pay an installment directly
   const handlePayInstallment = async (installmentId: string) => {
     try {
-      // Simulate settling the installment
-      await fetch('/api/import', {
+      const installment = profile?.installments.find((i) => i.id === installmentId)
+      const res = await fetch('/api/installments/pay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          csvText: `id,status\n${installmentId},paid`
+          installmentId,
+          amount: installment?.amount || 0,
         })
       })
 
-      // Reload
+      if (!res.ok) throw new Error('Falha ao pagar parcela')
+
       fetchProfile()
     } catch (e) {
       alert('Erro ao pagar parcela')
@@ -233,11 +237,11 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               <div className="space-y-3.5 text-xs">
                 <div>
                   <span className="text-slate-400 block mb-0.5">{t('clientDetail.emailLabel')}</span>
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">{profile.email}</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">{isSynthetic ? 'Sem e-mail real no XLSX' : profile.email}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block mb-0.5">{t('clientDetail.phoneLabel')}</span>
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">{profile.phone || t('clientDetail.noPhone')}</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">{profile.phone || 'Sem telefone real no XLSX'}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block mb-0.5">{t('clientDetail.operationalId')}</span>
@@ -272,11 +276,11 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                   <div key={con.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between border border-slate-100 dark:border-slate-800 p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-950/20 gap-3">
                     <div>
                       <div className="font-bold text-xs">{t('clientDetail.contractLabel', { num: con.contract_number })}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{t('clientDetail.contractPeriod', { start: new Date(con.start_date).toLocaleDateString('pt-BR'), end: new Date(con.end_date).toLocaleDateString('pt-BR') })}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">{con.start_date && con.end_date ? t('clientDetail.contractPeriod', { start: new Date(con.start_date).toLocaleDateString('pt-BR'), end: new Date(con.end_date).toLocaleDateString('pt-BR') }) : 'Periodo nao disponivel no XLSX'}</div>
                     </div>
                     <div className="text-right sm:text-left">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{t('clientDetail.contractValueLabel')}</span>
-                      <span className="font-extrabold text-sm text-indigo-600 dark:text-indigo-400">R$ {con.total_value.toLocaleString('pt-BR')}</span>
+                      <span className="font-extrabold text-sm text-indigo-600 dark:text-indigo-400">{typeof con.total_value === 'number' ? `R$ ${con.total_value.toLocaleString('pt-BR')}` : 'Nao informado'}</span>
                     </div>
                   </div>
                 ))}

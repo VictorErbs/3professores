@@ -10,9 +10,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing clientId parameter' }, { status: 400 })
     }
 
-    // Auto-seed if database is empty (makes UX seamless)
-    await db.seed()
-
     // Retrieve client details
     const client = await db.clients.get(clientId)
     if (!client) {

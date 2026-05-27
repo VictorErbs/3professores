@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import Header from '@/components/Header'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
@@ -37,7 +37,6 @@ export default function DashboardPage() {
   const [kpis, setKpis] = useState<KPI | null>(null)
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [projections, setProjections] = useState<ProjectionData[]>([])
-  const [scenario, setScenario] = useState<'best' | 'base' | 'worst'>('base')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -54,7 +53,7 @@ export default function DashboardPage() {
     } catch (e) {
       setError((e as Error).message || 'Erro de conexão')
     } finally {
-      if (forceLoading) setLoading(false)
+      setLoading(false)
     }
   }
 
@@ -90,24 +89,12 @@ export default function DashboardPage() {
     }
   }
 
-  // Get current projection value based on scenario
-  const getScenarioValue = (proj: ProjectionData) => {
-    if (scenario === 'best') return proj.best
-    if (scenario === 'worst') return proj.worst
-    return proj.base
-  }
-
-  const getScenarioLabel = () => {
-    if (scenario === 'best') return t('dashboard.scenarioBest')
-    if (scenario === 'worst') return t('dashboard.scenarioWorst')
-    return t('dashboard.scenarioBase')
-  }
-
-  const getScenarioColor = () => {
-    if (scenario === 'best') return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200'
-    if (scenario === 'worst') return 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20 border-rose-200'
-    return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border-amber-200'
-  }
+  const alertStats = useMemo(() => {
+    const critical = alerts.filter(a => a.severity === 'critical').length
+    const medium = alerts.filter(a => a.severity === 'medium').length
+    const low = alerts.filter(a => a.severity === 'low').length
+    return { critical, medium, low, total: alerts.length }
+  }, [alerts])
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
@@ -197,90 +184,77 @@ export default function DashboardPage() {
               
               {/* Cash Flow Projection (Left & Middle Column) */}
               <div className="lg:col-span-2 space-y-8">
-                <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                    <div>
-                      <h3 className="font-bold text-lg text-slate-900 dark:text-white">{t('dashboard.projectionTitle')}</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{t('dashboard.projectionSubtitle')}</p>
-                    </div>
+                 <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                   <div className="flex items-center justify-between gap-4 mb-6">
+                     <div>
+                       <h3 className="font-bold text-lg text-slate-900 dark:text-white">{t('dashboard.priorityTitle')}</h3>
+                       <p className="text-xs text-slate-500 dark:text-slate-400">{t('dashboard.prioritySubtitle')}</p>
+                     </div>
+                   </div>
 
-                    {/* Scenario Switcher Buttons */}
-                    <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950 p-1.5 rounded-xl self-start sm:self-auto border border-slate-200/40">
-                      {(['best', 'base', 'worst'] as const).map((sc) => (
-                        <button
-                          key={sc}
-                          onClick={() => setScenario(sc)}
-                          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 capitalize ${
-                            scenario === sc
-                              ? sc === 'best'
-                                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/10'
-                                : sc === 'worst'
-                                ? 'bg-rose-600 text-white shadow-md shadow-rose-600/10'
-                                : 'bg-amber-500 text-white shadow-md shadow-amber-500/10'
-                              : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600'
-                          }`}
-                        >
-                          {sc === 'best' ? t('dashboard.scenarioBtnBest') : sc === 'worst' ? t('dashboard.scenarioBtnWorst') : t('dashboard.scenarioBtnBase')}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                     <div className="rounded-2xl border border-rose-100 bg-rose-50/70 p-4 dark:border-rose-900/30 dark:bg-rose-950/20">
+                       <p className="text-[10px] uppercase tracking-wider text-rose-400 font-bold">{t('dashboard.priorityCritical')}</p>
+                       <p className="text-lg font-black text-rose-600 dark:text-rose-400">{alertStats.critical}</p>
+                     </div>
+                     <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-4 dark:border-amber-900/30 dark:bg-amber-950/20">
+                       <p className="text-[10px] uppercase tracking-wider text-amber-500 font-bold">{t('dashboard.priorityMedium')}</p>
+                       <p className="text-lg font-black text-amber-600 dark:text-amber-400">{alertStats.medium}</p>
+                     </div>
+                     <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/30">
+                       <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">{t('dashboard.priorityTotal')}</p>
+                       <p className="text-lg font-black text-slate-900 dark:text-white">{alertStats.total}</p>
+                     </div>
+                   </div>
 
-                  {/* Active Scenario Banner */}
-                  <div className={`mb-6 rounded-2xl border p-4 text-xs font-semibold flex items-center justify-between ${getScenarioColor()}`}>
-                    <span>📋 {t('dashboard.modelActive')}{getScenarioLabel()}</span>
-                  </div>
+                   <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="rounded-2xl border border-slate-100 dark:border-slate-800 p-4">
+                       <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-3">{t('dashboard.priorityIndicators')}</h4>
+                       <div className="space-y-2 text-xs">
+                         <div className="flex items-center justify-between">
+                           <span className="text-slate-500">{t('dashboard.kpiVolumeAtRisk')}</span>
+                           <span className="font-bold text-slate-900 dark:text-white">R$ {kpis ? kpis.totalOverdue.toLocaleString('pt-BR') : 0}</span>
+                         </div>
+                         <div className="flex items-center justify-between">
+                           <span className="text-slate-500">{t('dashboard.kpiDelinquency')}</span>
+                           <span className="font-bold text-slate-900 dark:text-white">{kpis ? kpis.delinquencyRate : 0}%</span>
+                         </div>
+                         <div className="flex items-center justify-between">
+                           <span className="text-slate-500">{t('dashboard.kpiRecovery')}</span>
+                           <span className="font-bold text-slate-900 dark:text-white">{kpis ? kpis.recoveryRate : 0}%</span>
+                         </div>
+                         <div className="flex items-center justify-between">
+                           <span className="text-slate-500">{t('dashboard.kpiCritical')}</span>
+                           <span className="font-bold text-slate-900 dark:text-white">{kpis ? kpis.criticalClients : 0}</span>
+                         </div>
+                       </div>
+                     </div>
 
-                  {/* Graphical Projection using responsive HTML Bars */}
-                  <div className="space-y-5 my-8">
-                    {projections.map((proj) => {
-                      const maxVal = Math.max(...projections.map(p => p.expected))
-                      const expectedPercent = maxVal > 0 ? (proj.expected / maxVal) * 100 : 0
-                      const projectedPercent = maxVal > 0 ? (getScenarioValue(proj) / maxVal) * 100 : 0
-
-                      return (
-                        <div key={proj.label} className="space-y-1.5">
-                          <div className="flex items-center justify-between text-xs font-bold">
-                            <span className="text-slate-600 dark:text-slate-400">{proj.label}</span>
-                            <div className="flex gap-4">
-                              <span className="text-slate-400">{t('dashboard.forecastExpected')}: R$ {proj.expected.toLocaleString('pt-BR')}</span>
-                              <span className="text-indigo-600 dark:text-indigo-400">{t('dashboard.forecastSimulated')}: R$ {getScenarioValue(proj).toLocaleString('pt-BR')}</span>
-                            </div>
-                          </div>
-                          
-                          {/* Progress bar structure */}
-                          <div className="relative h-4 w-full rounded-full bg-slate-100 dark:bg-slate-950 overflow-hidden">
-                            {/* Expected bar */}
-                            <div
-                              style={{ width: `${expectedPercent}%` }}
-                              className="absolute top-0 left-0 h-full bg-slate-300 dark:bg-slate-800 transition-all duration-500"
-                            />
-                            {/* Scenario bar */}
-                            <div
-                              style={{ width: `${projectedPercent}%` }}
-                              className={`absolute top-0 left-0 h-full transition-all duration-500 ${
-                                scenario === 'best' 
-                                  ? 'bg-emerald-500' 
-                                  : scenario === 'worst' 
-                                  ? 'bg-rose-500' 
-                                  : 'bg-amber-500'
-                              }`}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  <div className="flex gap-4 items-center justify-end text-[10px] text-slate-400 font-semibold border-t border-slate-100 dark:border-slate-800 pt-4">
-                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-800"></span> {t('dashboard.forecastExpectedLegend')}</span>
-                    <span className="flex items-center gap-1">
-                      <span className={`h-2 w-2 rounded-full ${
-                        scenario === 'best' ? 'bg-emerald-500' : scenario === 'worst' ? 'bg-rose-500' : 'bg-amber-500'
-                      }`}></span> {t('dashboard.forecastSimulatedLegend')}
-                    </span>
-                  </div>
-                </div>
+                     <div className="rounded-2xl border border-slate-100 dark:border-slate-800 p-4">
+                       <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-3">{t('dashboard.priorityRecent')}</h4>
+                       {alerts.length === 0 ? (
+                         <p className="text-xs text-slate-500">{t('dashboard.priorityEmpty')}</p>
+                       ) : (
+                         <div className="space-y-2">
+                           {alerts.slice(0, 4).map((alert) => (
+                             <div key={alert.id} className="flex items-center justify-between text-xs">
+                               <span className="text-slate-600 dark:text-slate-300 truncate max-w-[180px]">{alert.message}</span>
+                               <span className={`text-[10px] uppercase font-bold ${
+                                 alert.severity === 'critical'
+                                   ? 'text-rose-600 dark:text-rose-400'
+                                   : alert.severity === 'medium'
+                                   ? 'text-amber-600 dark:text-amber-400'
+                                   : 'text-emerald-600 dark:text-emerald-400'
+                               }`}>
+                                 {alert.severity}
+                               </span>
+                             </div>
+                           ))}
+                         </div>
+                       )}
+                     </div>
+                   </div>
+                 </div>
 
                 {/* Dashboard Action Banner */}
                 <div className="rounded-3xl bg-gradient-to-r from-indigo-600 to-violet-700 p-6 text-white shadow-xl shadow-indigo-600/10 flex flex-col sm:flex-row items-center justify-between gap-6">
@@ -289,7 +263,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-indigo-100 mt-1 max-w-md">{t('dashboard.actionBannerDesc')}</p>
                   </div>
                   <a
-                    href="/upload"
+                    href="/collections"
                     className="shrink-0 rounded-xl bg-white px-5 py-2.5 text-xs font-extrabold text-indigo-600 hover:bg-slate-50 transition shadow"
                   >
                     {t('dashboard.actionBannerBtn')}

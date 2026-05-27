@@ -53,3 +53,6 @@ next-env.d.ts
 # ide
 .vscode/
 .idea/
+
+# supabase
+**/supabase/.temp/

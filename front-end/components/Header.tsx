@@ -10,11 +10,9 @@ export default function Header() {
   const { t, i18n } = useTranslation()
 
   useEffect(() => {
-    // Quick fetch to check if using local mock database
-    fetch('/api/clients?id=test-conn-probe')
-      .then(() => {
-        // Just probing, it's fine if it returns 404 or empty
-        setIsMock(false)
+    fetch('/api/clients')
+      .then((res) => {
+        setIsMock(!res.ok)
       })
       .catch(() => {
         setIsMock(true)
@@ -25,7 +23,6 @@ export default function Header() {
     { href: '/', label: t('header.dashboard') },
     { href: '/collections', label: t('header.collections') },
     { href: '/clients', label: t('header.clients') },
-    { href: '/upload', label: t('header.upload') },
   ]
 
   return (

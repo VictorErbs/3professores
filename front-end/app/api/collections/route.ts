@@ -1,16 +1,31 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 export async function GET() {
   try {
-    // Seed if empty
-    await db.seed()
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const supabase = supabaseUrl && supabaseServiceRoleKey
+      ? createSupabaseClient(supabaseUrl, supabaseServiceRoleKey, { auth: { persistSession: false } })
+      : null
 
     const clients = await db.clients.list()
     const contracts = await db.contracts.list()
     const installments = await db.installments.list()
     const riskScores = await db.risk_scores.list()
     const alerts = await db.alerts.list()
+    const metadataMap = new Map<string, { advisory_name: string | null; collection_status: string | null; client_region: string | null; contemplated_indicator: string | null; payment_method: string | null }>()
+
+    if (supabase) {
+      const { data: metadataRows } = await supabase
+        .from('contract_metadata')
+        .select('contract_number, advisory_name, collection_status, client_region, contemplated_indicator, payment_method')
+
+      for (const row of metadataRows || []) {
+        metadataMap.set(row.contract_number, row)
+      }
+    }
 
     const collectionsQueue = []
     const today = new Date()
@@ -19,6 +34,7 @@ export async function GET() {
       // Find all contracts for this client
       const clientContracts = contracts.filter(con => con.client_id === client.id)
       const contractIds = clientContracts.map(con => con.id)
+      const contractNumbers = clientContracts.map(con => con.contract_number).filter(Boolean)
 
       // Find all overdue installments
       const clientOverdueInsts = installments.filter(inst => 
@@ -84,7 +100,83 @@ export async function GET() {
         riskScore: latestScore,
         priority,
         status,
-        recommendedAction
+        recommendedAction,
+        advisoryName: metadataMap.get(contractNumbers[0])?.advisory_name || null,
+        collectionStatus: metadataMap.get(contractNumbers[0])?.collection_status || null,
+        clientRegion: metadataMap.get(contractNumbers[0])?.client_region || null,
+        contemplatedIndicator: metadataMap.get(contractNumbers[0])?.contemplated_indicator || null,
+        paymentMethod: metadataMap.get(contractNumbers[0])?.payment_method || null,
+      })
+    }
+
+    // If no overdue clients found, surface top risk clients as fallback
+    if (collectionsQueue.length === 0) {
+      const latestByClient = new Map<string, number>()
+      for (const score of riskScores) {
+        if (!latestByClient.has(score.client_id)) {
+          latestByClient.set(score.client_id, Number(score.score) || 0)
+        }
+      }
+
+      for (const client of clients) {
+        const score = latestByClient.get(client.id) || 0
+        if (score < 35) continue
+        collectionsQueue.push({
+          clientId: client.id,
+          name: client.name,
+          email: client.email,
+          phone: client.phone,
+          cpf: client.cpf,
+          overdueCount: 0,
+          totalOverdueAmount: 0,
+          maxDaysOverdue: 0,
+          riskScore: score,
+          priority: score,
+          status: 'open',
+          recommendedAction: score >= 70 ? 'Contato imediato' : 'Contato preventivo',
+          advisoryName: null,
+          collectionStatus: null,
+          clientRegion: null,
+          contemplatedIndicator: null,
+          paymentMethod: null,
+        })
+      }
+    }
+
+    // Ensure new clients without installments appear with a clear status
+    const latestByClient = new Map<string, number>()
+    for (const score of riskScores) {
+      if (!latestByClient.has(score.client_id)) {
+        latestByClient.set(score.client_id, Number(score.score) || 0)
+      }
+    }
+
+    for (const client of clients) {
+      const clientContracts = contracts.filter(con => con.client_id === client.id)
+      const contractIds = clientContracts.map(con => con.id)
+      const hasInstallments = installments.some(inst => contractIds.includes(inst.contract_id))
+      const alreadyInQueue = collectionsQueue.some(item => item.clientId === client.id)
+      if (alreadyInQueue || hasInstallments) continue
+
+      const score = latestByClient.get(client.id) || 0
+      collectionsQueue.push({
+        clientId: client.id,
+        name: client.name,
+        email: client.email,
+        phone: client.phone,
+        cpf: client.cpf,
+        overdueCount: 0,
+        totalOverdueAmount: 0,
+        maxDaysOverdue: 0,
+        riskScore: score,
+        priority: score,
+        status: 'open',
+        recommendedAction: 'Cadastrar parcelas',
+        advisoryName: null,
+        collectionStatus: 'Sem parcelas',
+        clientRegion: null,
+        contemplatedIndicator: null,
+        paymentMethod: null,
       })
     }
 
