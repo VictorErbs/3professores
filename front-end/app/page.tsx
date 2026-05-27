@@ -124,12 +124,6 @@ export default function DashboardPage() {
               {t('dashboard.subtitle')}
             </p>
           </div>
-          <button
-            onClick={() => fetchDashboardData(true)}
-            className="self-start md:self-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition"
-          >
-            {t('dashboard.sync')}
-          </button>
         </div>
 
         {error && (
