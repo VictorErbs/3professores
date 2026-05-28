@@ -19,6 +19,26 @@ my-app/
 └── back-end/           # Reservado para funções futuras
 ```
 
+## Tecnologias utilizadas
+
+A plataforma foi desenvolvida utilizando tecnologias modernas que garantem alta performance, escalabilidade e tipagem forte:
+
+*   **Front-end & Core:**
+    *   **Next.js 16 (App Router)** — Framework React para renderização híbrida, rotas dinâmicas e otimização.
+    *   **React 19** — Biblioteca declarativa e eficiente para construção de interfaces.
+    *   **TypeScript** — Tipagem estática para robustez do código e prevenção de erros em tempo de execução.
+    *   **Tailwind CSS v4** — Framework CSS utilitário para design responsivo e consistente com o Design System.
+    *   **i18next & react-i18next** — Gerenciamento dinâmico de internacionalização (tradução).
+
+*   **Banco de Dados & Autenticação:**
+    *   **Supabase (PostgreSQL)** — Backend-as-a-Service para persistência relacional, autenticação segura de usuários (Supabase Auth) e controle de acessos.
+    *   **Firebase** — Serviço adicional configurado na stack para integrações secundárias.
+
+*   **Processamento & Ingestão de Dados:**
+    *   **xlsx (SheetJS)** — Ferramenta de alta performance para importação e parsing de planilhas Excel (`fluxo_pagamentos.xlsx` com ~100K registros).
+    *   **csv-parse** — Utilitário de parsing de fluxos CSV para ingestão de dados em lote (`cobranca_assessorias.csv` com ~10K registros).
+    *   **pdf-parse** — Biblioteca para extração e processamento de informações contidas em documentos PDF.
+
 ## Progresso do projeto
 
 | Status | Item | Detalhes |
