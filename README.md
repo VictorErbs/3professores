@@ -21,23 +21,29 @@ my-app/
 
 ## Tecnologias utilizadas
 
-A plataforma foi desenvolvida utilizando tecnologias modernas que garantem alta performance, escalabilidade e tipagem forte:
+A plataforma foi desenvolvida utilizando uma arquitetura full-stack moderna que separa claramente as responsabilidades de interface, lógica de negócios do servidor e banco de dados:
 
-*   **Front-end & Core:**
-    *   **Next.js 16 (App Router)** — Framework React para renderização híbrida, rotas dinâmicas e otimização.
-    *   **React 19** — Biblioteca declarativa e eficiente para construção de interfaces.
-    *   **TypeScript** — Tipagem estática para robustez do código e prevenção de erros em tempo de execução.
-    *   **Tailwind CSS v4** — Framework CSS utilitário para design responsivo e consistente com o Design System.
-    *   **i18next & react-i18next** — Gerenciamento dinâmico de internacionalização (tradução).
+### 💻 Front-end
+*   **Next.js 16 (App Router)** — Framework React utilizado para renderização rápida, otimização de fontes/imagens e roteamento dinâmico.
+*   **React 19** — Biblioteca moderna e declarativa para criação de componentes interativos e reativos.
+*   **TypeScript** — Tipagem estática para garantir a segurança do código, autocomplete avançado e robustez contra bugs em tempo de execução.
+*   **Tailwind CSS v4** — Framework utilitário moderno para estilização rápida, garantindo consistência com o Design System corporativo e responsividade.
+*   **i18next & react-i18next** — Sistema robusto para internacionalização (i18n), permitindo a tradução dinâmica e localização da interface.
 
-*   **Banco de Dados & Autenticação:**
-    *   **Supabase (PostgreSQL)** — Backend-as-a-Service para persistência relacional, autenticação segura de usuários (Supabase Auth) e controle de acessos.
-    *   **Firebase** — Serviço adicional configurado na stack para integrações secundárias.
+### ⚙️ Back-end
+*   **Next.js Serverless Routes** — Rotas de API (`/api/*`) que funcionam como o backend da aplicação, lidando com requisições HTTP, proteção de rotas e processamento assíncrono.
+*   **Motor Analítico de Risco (Heurística)** — Lógica implementada no servidor que avalia dinamicamente a inadimplência de clientes com base em contratos e parcelas em atraso, gerando scores de risco (0-100) e alertas críticos automaticamente.
+*   **Scripts de Ingestão de Dados (Node.js)** — Scripts automatizados para leitura de grandes volumes de dados (CSV e Excel), processamento relacional e inserção em lote (batching).
+*   **Reserva para Microserviços (`/back-end`)** — Diretório estruturado e reservado para futuras funções isoladas (ex: cloud functions, microsserviços adicionais de predição em Python ou Node).
 
-*   **Processamento & Ingestão de Dados:**
-    *   **xlsx (SheetJS)** — Ferramenta de alta performance para importação e parsing de planilhas Excel (`fluxo_pagamentos.xlsx` com ~100K registros).
-    *   **csv-parse** — Utilitário de parsing de fluxos CSV para ingestão de dados em lote (`cobranca_assessorias.csv` com ~10K registros).
-    *   **pdf-parse** — Biblioteca para extração e processamento de informações contidas em documentos PDF.
+### 🗄️ Banco de Dados & Segurança
+*   **Supabase (PostgreSQL)** — Backend-as-a-Service relacional para armazenamento persistente dos dados. Utiliza schemas SQL estruturados, triggers e chamadas de procedimento remoto (RPC) para operações otimizadas.
+*   **Supabase Auth** — Autenticação robusta e segura integrada à plataforma para controle de acesso dos analistas e administradores.
+
+### 📊 Processamento de Dados & Utilitários
+*   **xlsx (SheetJS)** — Leitura e parsing ultraveloz de arquivos Excel (`fluxo_pagamentos.xlsx` com ~100K registros).
+*   **csv-parse** — Utilitário de parsing de streams CSV para processar grandes volumes de dados (`cobranca_assessorias.csv` com ~10K registros) com baixo uso de memória.
+*   **pdf-parse** — Biblioteca para extração e processamento de informações contidas em documentos PDF.
 
 ## Progresso do projeto
 
