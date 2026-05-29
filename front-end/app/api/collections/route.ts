@@ -52,7 +52,7 @@ export async function GET(req: Request) {
             'Content-Type': 'application/json',
             'Prefer': 'count=none',
             'Range-Unit': 'items',
-            'Range': '0-9999',
+            'Range': '0-299',
           },
         })
         if (!res.ok) {
