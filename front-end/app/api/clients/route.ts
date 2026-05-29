@@ -68,13 +68,20 @@ export async function GET(req: Request) {
         const contractIds = contracts.map(c => c.id)
         const allInstallments = await db.installments.list()
         const clientInstallments = allInstallments.filter(inst => contractIds.includes(inst.contract_id))
-        return NextResponse.json({ ...client, contracts, installments: clientInstallments })
+        const riskScoreObj = await db.risk_scores.getLatestByClient(id)
+        return NextResponse.json({
+          ...client,
+          contracts,
+          installments: clientInstallments,
+          riskScore: riskScoreObj?.score ?? 15
+        })
       }
 
       // Direct REST for Supabase mode
-      const [clientArr, contracts] = await Promise.all([
+      const [clientArr, contracts, riskScores] = await Promise.all([
         supabaseGet('clients', { id: `eq.${id}`, select: '*' }),
         supabaseGet('contracts', { client_id: `eq.${id}`, select: '*' }),
+        supabaseGet('risk_scores', { client_id: `eq.${id}`, select: '*', order: 'computed_at.desc' }),
       ])
       const client = clientArr?.[0]
       if (!client) return NextResponse.json({ error: 'Client not found' }, { status: 404 })
@@ -88,7 +95,12 @@ export async function GET(req: Request) {
           order: 'due_date.asc',
         })
       }
-      return NextResponse.json({ ...client, contracts: contracts || [], installments })
+      return NextResponse.json({
+        ...client,
+        contracts: contracts || [],
+        installments,
+        riskScore: riskScores?.[0]?.score ?? 15
+      })
     }
 
     // List all clients (with optional server-side search)
@@ -99,38 +111,111 @@ export async function GET(req: Request) {
 
     const search = url.searchParams.get('search')?.trim()
 
-    // Direct REST: list all clients ordered by name
-    let supabaseUrl = `${SUPABASE_URL}/rest/v1/clients?select=*&order=name.asc`
+    // 1. Fetch clients first
+    let clientsPath = `clients?select=*&order=name.asc`
     if (search) {
       const escaped = search.replace(/[%_]/g, '\\$&')
-      supabaseUrl += `&or=(name.ilike.*${encodeURIComponent(escaped)}*,email.ilike.*${encodeURIComponent(escaped)}*,cpf.ilike.*${encodeURIComponent(escaped)}*)`
+      clientsPath += `&or=(name.ilike.*${encodeURIComponent(escaped)}*,email.ilike.*${encodeURIComponent(escaped)}*,cpf.ilike.*${encodeURIComponent(escaped)}*)`
     }
 
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 10000)
-    let clientsList
-    try {
-      const res = await fetch(supabaseUrl, {
-        signal: controller.signal,
-        cache: 'no-store',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'count=none',
-          'Range-Unit': 'items',
-          'Range': '0-9999',
-        },
-      })
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(`Supabase error ${res.status}: ${text}`)
-      }
-      clientsList = await res.json()
-    } finally {
-      clearTimeout(timer)
+    const clientsList = await supabaseGet(clientsPath)
+    if (!clientsList || !Array.isArray(clientsList) || clientsList.length === 0) {
+      return NextResponse.json([])
     }
-    return NextResponse.json(clientsList || [])
+
+    // 2. Extract client IDs and query risk scores and contracts in batches (to avoid large URLs)
+    const clientIds = clientsList.map((c: any) => c.id)
+    const CHUNK_SIZE = 150
+    const chunks: string[][] = []
+    for (let i = 0; i < clientIds.length; i += CHUNK_SIZE) {
+      chunks.push(clientIds.slice(i, i + CHUNK_SIZE))
+    }
+
+    const riskScoresPromises = chunks.map(chunk => 
+      supabaseGet('risk_scores', {
+        client_id: `in.(${chunk.join(',')})`,
+        select: 'client_id,score,model'
+      })
+    )
+
+    const contractsPromises = chunks.map(chunk => 
+      supabaseGet('contracts', {
+        client_id: `in.(${chunk.join(',')})`,
+        select: 'id,client_id,contract_number'
+      })
+    )
+
+    const [riskScoresChunks, contractsChunks] = await Promise.all([
+      Promise.all(riskScoresPromises),
+      Promise.all(contractsPromises)
+    ])
+
+    const riskScoresList = riskScoresChunks.flat()
+    const contractsList = contractsChunks.flat()
+
+    // 3. Extract contract numbers and query contract metadata in batches
+    const contractNumbers = contractsList
+      .map((c: any) => c.contract_number)
+      .filter((cn: any) => !!cn)
+
+    const contractNumberChunks: string[][] = []
+    for (let i = 0; i < contractNumbers.length; i += CHUNK_SIZE) {
+      contractNumberChunks.push(contractNumbers.slice(i, i + CHUNK_SIZE))
+    }
+
+    const metadataPromises = contractNumberChunks.map(chunk => 
+      supabaseGet('contract_metadata', {
+        contract_number: `in.(${chunk.join(',')})`,
+        select: 'contract_number,client_region,collection_status'
+      })
+    )
+
+    const metadataChunks = await Promise.all(metadataPromises)
+    const metadataList = metadataChunks.flat()
+
+    // 4. Build mapping indexes for O(1) merge
+    const riskMap = new Map<string, number>()
+    if (riskScoresList && Array.isArray(riskScoresList)) {
+      for (const r of riskScoresList) {
+        if (r && r.client_id) {
+          riskMap.set(r.client_id, Number(r.score) || 0)
+        }
+      }
+    }
+
+    const contractNumberMap = new Map<string, string>()
+    if (contractsList && Array.isArray(contractsList)) {
+      for (const c of contractsList) {
+        if (c && c.client_id && c.contract_number) {
+          contractNumberMap.set(c.client_id, c.contract_number)
+        }
+      }
+    }
+
+    const metaMap = new Map<string, any>()
+    if (metadataList && Array.isArray(metadataList)) {
+      for (const m of metadataList) {
+        if (m && m.contract_number) {
+          metaMap.set(m.contract_number, m)
+        }
+      }
+    }
+
+    // 5. Merge data into enriched clients
+    const enrichedClients = clientsList.map((client: any) => {
+      const score = riskMap.get(client.id) ?? 15
+      const contractNumber = contractNumberMap.get(client.id)
+      const meta = contractNumber ? metaMap.get(contractNumber) : null
+      
+      return {
+        ...client,
+        riskScore: score,
+        clientRegion: meta?.client_region || 'Sem regiao',
+        collectionStatus: meta?.collection_status || 'Sem status'
+      }
+    })
+
+    return NextResponse.json(enrichedClients)
 
   } catch (error: any) {
     console.error('Failed in clients API:', error)

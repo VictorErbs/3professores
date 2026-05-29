@@ -64,27 +64,22 @@ export default function ClientsListPage() {
       const clientsData = await res.json()
       setClients(clientsData)
 
-      // Load risk from collections queue in one request
       const tempScores = new Map<string, RiskDetail>()
-      const queueRes = await fetch('/api/collections')
-      if (queueRes.ok) {
-        const queueData = await queueRes.json()
-        const tempMeta = new Map<string, ClientMeta>()
-        for (const item of queueData) {
-          const score = Number(item.riskScore) || 0
-          const severity: 'low' | 'medium' | 'critical' = score >= 70 ? 'critical' : score >= 35 ? 'medium' : 'low'
-          tempScores.set(item.clientId, { score, severity })
-          tempMeta.set(item.clientId, {
-            collectionStatus: item.collectionStatus || 'Sem status',
-            clientRegion: item.clientRegion || 'Sem regiao',
-            paymentMethod: item.paymentMethod || 'Nao informado',
-            contemplatedIndicator: item.contemplatedIndicator || 'Nao informado',
-          })
-        }
-        setClientMeta(tempMeta)
+      const tempMeta = new Map<string, ClientMeta>()
+      for (const client of clientsData) {
+        const score = typeof client.riskScore === 'number' ? client.riskScore : 15
+        const severity: 'low' | 'medium' | 'critical' = score >= 70 ? 'critical' : score >= 35 ? 'medium' : 'low'
+        tempScores.set(client.id, { score, severity })
+        tempMeta.set(client.id, {
+          collectionStatus: client.collectionStatus || 'Sem status',
+          clientRegion: client.clientRegion || 'Sem regiao',
+          paymentMethod: 'Nao informado',
+          contemplatedIndicator: 'Nao informado',
+        })
       }
 
       setRiskScores(tempScores)
+      setClientMeta(tempMeta)
       setError('')
     } catch (e) {
       setError((e as Error).message || 'Erro de conexão')

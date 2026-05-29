@@ -4,9 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "import-csv": "node ./scripts/import_csv.js",
-    "normalize-staging": "node ./scripts/normalize_staging.js",
-    "import-real-data": "node ./scripts/import_real_data.js",
+    "import-real-data": "python ./scripts/import_real_data.py",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

@@ -33,17 +33,18 @@ A plataforma foi desenvolvida utilizando uma arquitetura full-stack moderna que 
 ### ⚙️ Back-end
 *   **Next.js Serverless Routes** — Rotas de API (`/api/*`) que funcionam como o backend da aplicação, lidando com requisições HTTP, proteção de rotas e processamento assíncrono.
 *   **Motor Analítico de Risco (Heurística)** — Lógica implementada no servidor que avalia dinamicamente a inadimplência de clientes com base em contratos e parcelas em atraso, gerando scores de risco (0-100) e alertas críticos automaticamente.
-*   **Scripts de Ingestão de Dados (Node.js)** — Scripts automatizados para leitura de grandes volumes de dados (CSV e Excel), processamento relacional e inserção em lote (batching).
+*   **Scripts de Ingestão de Dados (Python)** — Scripts automatizados baseados em Python 3 para leitura de grandes volumes de dados, limpeza via Pandas, plotagem estatística e inserção em lote (batching).
 *   **Reserva para Microserviços (`/back-end`)** — Diretório estruturado e reservado para futuras funções isoladas (ex: cloud functions, microsserviços adicionais de predição em Python ou Node).
 
 ### 🗄️ Banco de Dados & Segurança
 *   **Supabase (PostgreSQL)** — Backend-as-a-Service relacional para armazenamento persistente dos dados. Utiliza schemas SQL estruturados, triggers e chamadas de procedimento remoto (RPC) para operações otimizadas.
 *   **Supabase Auth** — Autenticação robusta e segura integrada à plataforma para controle de acesso dos analistas e administradores.
 
-### 📊 Processamento de Dados & Utilitários
-*   **xlsx (SheetJS)** — Leitura e parsing ultraveloz de arquivos Excel (`fluxo_pagamentos.xlsx` com ~100K registros).
-*   **csv-parse** — Utilitário de parsing de streams CSV para processar grandes volumes de dados (`cobranca_assessorias.csv` com ~10K registros) com baixo uso de memória.
-*   **pdf-parse** — Biblioteca para extração e processamento de informações contidas em documentos PDF.
+### 📊 Processamento de Dados & Utilitários (Python Analytics)
+*   **pandas** — Processamento relacional ultraveloz, limpeza e unificação de grandes volumes de dados (Excel com ~100K registros e CSV com ~10K registros).
+*   **openpyxl** — Parser Excel para leitura do fluxo de pagamentos.
+*   **seaborn & matplotlib** — Geração automatizada de gráficos estatísticos para análise de tendências temporais e risco regional.
+*   **urllib (Standard Library)** — Comunicação de rede direta de alta performance com a REST API do Supabase (zero dependências complexas).
 
 ## Progresso do projeto
 
@@ -134,20 +135,30 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-## Carga oficial no Supabase
+## Carga oficial no Supabase (Python Pipeline)
 
-1. Execute `front-end/supabase/schema.sql` no SQL Editor do Supabase
-2. Coloque os arquivos em `front-end/assets/`:
+1. Execute `front-end/supabase/schema.sql` no SQL Editor do Supabase.
+2. Certifique-se de que os seguintes pacotes Python estejam instalados:
+   ```powershell
+   pip install pandas openpyxl matplotlib seaborn
+   ```
+3. Coloque os arquivos brutos em `front-end/assets/`:
    - `cobranca_assessorias.csv`
    - `fluxo_pagamentos.xlsx`
-3. Rode:
+4. Rode:
+   ```powershell
+   cd my-app\front-end
+   npm run import-real-data
+   ```
 
-```powershell
-cd my-app\front-end
-npm run import-real-data
-```
+O script em Python limpa os dois arquivos brutos via Pandas, exporta os gráficos analíticos em Seaborn para `public/analysis_plots.png`, trunca os dados antigos via chamada RPC do Supabase, e insere os novos dados estruturados de forma relacional em lotes de 500.
 
-O script lê os dois arquivos, trunca os dados existentes via RPC e insere em lotes de 500.
+### 🗑️ Histórico de Migração (Scripts Depreciados e Removidos)
+Para simplificar e padronizar o repositório em favor do Python, os seguintes scripts antigos em JavaScript (Node.js) foram depreciados e removidos da pasta `front-end/scripts/`:
+- **`import_real_data.js`** — Antigo carregador em Node.js. Substituído por `import_real_data.py`, que agora realiza o processo principal integrado às regras analíticas e visualizações de gráficos.
+- **`import_csv.js`** — Antigo script para carregamento individual de dados brutos na tabela de staging.
+- **`normalize_staging.js`** — Antigo script para transferência de dados de staging para as tabelas operacionais.
+- **`parse_pdf.js`** — Antigo utilitário de parsing de PDF em Node.js.
 
 ## Deploy
 
