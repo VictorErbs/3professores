@@ -162,36 +162,83 @@ df_grafico_regiao = df_grafico_regiao.sort_values(by='Valor_Inadimplente_Inicial
 df_consolidado['Ano_Mes_Str'] = df_consolidado['Data_Vencimento'].dt.to_period('M').astype(str)
 df_grafico_tempo = df_consolidado[df_consolidado['Status_Parcela'] == 'Em Aberto'].groupby('Ano_Mes_Str')['Valor_Parcela'].sum().reset_index()
 
-sns.set_theme(style="whitegrid")
-fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+import matplotlib.ticker as ticker
 
+# Custom currency formatter for Brazilian Reais
+def format_millions(x, pos):
+    if x >= 1e6:
+        return f"R$ {x*1e-6:.1f}M".replace('.', ',')
+    elif x >= 1e3:
+        return f"R$ {x*1e-3:.0f}k".replace('.', ',')
+    return f"R$ {x:.0f}"
+
+formatter = ticker.FuncFormatter(format_millions)
+
+sns.set_theme(style="whitegrid", rc={"grid.color": "#e2e8f0", "grid.linestyle": "--"})
+fig, axes = plt.subplots(1, 2, figsize=(18, 7))
+
+# Plot 1: Volume de Inadimplência por Região
+colors_regiao = ['#1e3a8a', '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd']
 sns.barplot(
     data=df_grafico_regiao,
     x='Regiao_Cliente',
     y='Valor_Inadimplente_Inicial',
     ax=axes[0],
-    palette='Blues_r'
+    palette=colors_regiao,
+    hue='Regiao_Cliente',
+    legend=False
 )
-axes[0].set_title('Volume Total de Dívida por Região (R$)', fontsize=12, fontweight='bold')
-axes[0].set_xlabel('Região do Cliente')
-axes[0].set_ylabel('Valor Total Devido')
+axes[0].set_title('Volume Total de Inadimplência por Região', fontsize=14, fontweight='bold', pad=15, color='#1e293b')
+axes[0].set_xlabel('Região do Cliente', fontsize=11, labelpad=10, fontweight='semibold', color='#475569')
+axes[0].set_ylabel('Valor Total Devido (R$)', fontsize=11, labelpad=10, fontweight='semibold', color='#475569')
+axes[0].yaxis.set_major_formatter(formatter)
 
+# Add exact value labels on top of the bars
+for p in axes[0].patches:
+    height = p.get_height()
+    if height > 0:
+        axes[0].annotate(
+            f"R$ {height*1e-6:.1f}M".replace('.', ','),
+            (p.get_x() + p.get_width() / 2., height),
+            ha='center', va='bottom', fontsize=10, fontweight='bold', color='#0f172a',
+            xytext=(0, 5), textcoords='offset points'
+        )
+
+# Plot 2: Evolução Mensal da Inadimplência
 sns.lineplot(
     data=df_grafico_tempo,
     x='Ano_Mes_Str',
     y='Valor_Parcela',
     ax=axes[1],
     marker='o',
-    color='#ef4444',
-    linewidth=2.5
+    markersize=8,
+    color='#dc2626',
+    linewidth=3,
+    markerfacecolor='#991b1b',
+    markeredgecolor='white',
+    markeredgewidth=1.5
 )
-axes[1].set_title('Evolução da Inadimplência por Mês de Vencimento', fontsize=12, fontweight='bold')
-axes[1].set_xlabel('Mês de Vencimento')
-axes[1].set_ylabel('Valor Total em Aberto (R$)')
-axes[1].tick_params(axis='x', rotation=45)
+axes[1].set_title('Evolução da Inadimplência por Mês de Vencimento', fontsize=14, fontweight='bold', pad=15, color='#1e293b')
+axes[1].set_xlabel('Mês de Vencimento', fontsize=11, labelpad=10, fontweight='semibold', color='#475569')
+axes[1].set_ylabel('Valor Total em Aberto (R$)', fontsize=11, labelpad=10, fontweight='semibold', color='#475569')
+axes[1].tick_params(axis='x', rotation=45, labelsize=9)
+axes[1].yaxis.set_major_formatter(formatter)
 
-plt.tight_layout()
-# Save plots as artifact image
+# Add exact value labels for line plot points
+for i, row in df_grafico_tempo.iterrows():
+    x_val = row['Ano_Mes_Str']
+    y_val = row['Valor_Parcela']
+    label_text = f"R$ {y_val*1e-6:.2f}M".replace('.', ',')
+    axes[1].annotate(
+        label_text,
+        (x_val, y_val),
+        textcoords="offset points",
+        xytext=(0, 10),
+        ha='center', fontsize=9, fontweight='bold', color='#7f1d1d'
+    )
+
+# Subtle layout adjustments to avoid overlaps
+plt.subplots_adjust(top=0.88, bottom=0.18, left=0.08, right=0.95, hspace=0.2, wspace=0.25)
 plt.savefig(PLOT_FILE, dpi=300)
 plt.close()
 print(f"Gráficos salvos com sucesso em: {PLOT_FILE}", flush=True)
