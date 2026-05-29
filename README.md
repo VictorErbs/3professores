@@ -153,12 +153,6 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 O script em Python limpa os dois arquivos brutos via Pandas, exporta os gráficos analíticos em Seaborn para `public/analysis_plots.png`, trunca os dados antigos via chamada RPC do Supabase, e insere os novos dados estruturados de forma relacional em lotes de 500.
 
-### 🗑️ Histórico de Migração (Scripts Depreciados e Removidos)
-Para simplificar e padronizar o repositório em favor do Python, os seguintes scripts antigos em JavaScript (Node.js) foram depreciados e removidos da pasta `front-end/scripts/`:
-- **`import_real_data.js`** — Antigo carregador em Node.js. Substituído por `import_real_data.py`, que agora realiza o processo principal integrado às regras analíticas e visualizações de gráficos.
-- **`import_csv.js`** — Antigo script para carregamento individual de dados brutos na tabela de staging.
-- **`normalize_staging.js`** — Antigo script para transferência de dados de staging para as tabelas operacionais.
-- **`parse_pdf.js`** — Antigo utilitário de parsing de PDF em Node.js.
 
 ## Deploy
 
