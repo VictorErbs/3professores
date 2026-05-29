@@ -64,19 +64,97 @@ export async function GET(req: Request) {
         clearTimeout(timer)
       }
     }
-    const contracts = await db.contracts.list()
-    const installments = await db.installments.list()
-    const riskScores = await db.risk_scores.list()
-    const alerts = await db.alerts.list()
+    let contracts: any[] = []
+    let installments: any[] = []
+    let riskScores: any[] = []
+    let alerts: any[] = []
     const metadataMap = new Map<string, { advisory_name: string | null; collection_status: string | null; client_region: string | null; contemplated_indicator: string | null; payment_method: string | null }>()
 
-    if (supabase) {
-      const { data: metadataRows } = await supabase
-        .from('contract_metadata')
-        .select('contract_number, advisory_name, collection_status, client_region, contemplated_indicator, payment_method')
+    if (db.isMock()) {
+      contracts = await db.contracts.list()
+      installments = await db.installments.list()
+      riskScores = await db.risk_scores.list()
+      alerts = await db.alerts.list()
+    } else {
+      // Direct Supabase chunked querying (overcomes 1000 row truncation limit)
+      const clientIds = clients.map((c: any) => c.id)
+      const CHUNK_SIZE = 150
+      const chunks: string[][] = []
+      for (let i = 0; i < clientIds.length; i += CHUNK_SIZE) {
+        chunks.push(clientIds.slice(i, i + CHUNK_SIZE))
+      }
 
-      for (const row of metadataRows || []) {
-        metadataMap.set(row.contract_number, row)
+      // Fetch contracts, risk scores, and alerts in parallel
+      const contractsPromises = chunks.map(async chunk => {
+        const { data } = await supabase!
+          .from('contracts')
+          .select('id,client_id,contract_number')
+          .in('client_id', chunk)
+        return data || []
+      })
+      const riskScoresPromises = chunks.map(async chunk => {
+        const { data } = await supabase!
+          .from('risk_scores')
+          .select('client_id,score,computed_at')
+          .in('client_id', chunk)
+        return data || []
+      })
+      const alertsPromises = chunks.map(async chunk => {
+        const { data } = await supabase!
+          .from('alerts')
+          .select('id,client_id,severity,resolved')
+          .in('client_id', chunk)
+        return data || []
+      })
+
+      const [contractsChunks, riskScoresChunks, alertsChunks] = await Promise.all([
+        Promise.all(contractsPromises),
+        Promise.all(riskScoresPromises),
+        Promise.all(alertsPromises)
+      ])
+
+      contracts = contractsChunks.flat()
+      riskScores = riskScoresChunks.flat()
+      alerts = alertsChunks.flat()
+
+      // Fetch installments specifically for the contract IDs
+      const contractIds = contracts.map((c: any) => c.id).filter(Boolean)
+      const contractIdChunks: string[][] = []
+      for (let i = 0; i < contractIds.length; i += CHUNK_SIZE) {
+        contractIdChunks.push(contractIds.slice(i, i + CHUNK_SIZE))
+      }
+
+      const installmentsPromises = contractIdChunks.map(async chunk => {
+        const { data } = await supabase!
+          .from('installments')
+          .select('id,contract_id,amount,status,due_date')
+          .in('contract_id', chunk)
+        return data || []
+      })
+      const installmentsChunks = await Promise.all(installmentsPromises)
+      installments = installmentsChunks.flat()
+
+      // Fetch contract metadata specifically for the contract numbers
+      const contractNumbers = contracts.map((c: any) => c.contract_number).filter(Boolean)
+      const contractNumberChunks: string[][] = []
+      for (let i = 0; i < contractNumbers.length; i += CHUNK_SIZE) {
+        contractNumberChunks.push(contractNumbers.slice(i, i + CHUNK_SIZE))
+      }
+
+      const metadataPromises = contractNumberChunks.map(async chunk => {
+        const { data } = await supabase!
+          .from('contract_metadata')
+          .select('contract_number,advisory_name,collection_status,client_region,contemplated_indicator,payment_method')
+          .in('contract_number', chunk)
+        return data || []
+      })
+      const metadataChunks = await Promise.all(metadataPromises)
+      const metadataList = metadataChunks.flat()
+
+      for (const row of metadataList || []) {
+        if (row && row.contract_number) {
+          metadataMap.set(row.contract_number, row)
+        }
       }
     }
 
