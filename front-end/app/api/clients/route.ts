@@ -73,7 +73,7 @@ export async function GET(req: Request) {
           ...client,
           contracts,
           installments: clientInstallments,
-          riskScore: riskScoreObj?.score ?? 15
+          riskScore: riskScoreObj?.score ?? 54.0
         })
       }
 
@@ -95,11 +95,28 @@ export async function GET(req: Request) {
           order: 'due_date.asc',
         })
       }
+
+      let metadata: any[] = []
+      const contractNumbers = (contracts || []).map((c: any) => c.contract_number).filter(Boolean)
+      if (contractNumbers.length > 0) {
+        metadata = await supabaseGet('contract_metadata', {
+          contract_number: `in.(${contractNumbers.join(',')})`,
+          select: '*'
+        })
+      }
+
+      const primaryMeta = metadata?.[0] || null
+
       return NextResponse.json({
         ...client,
         contracts: contracts || [],
         installments,
-        riskScore: riskScores?.[0]?.score ?? 15
+        riskScore: riskScores?.[0]?.score ?? 54.0,
+        contemplatedIndicator: primaryMeta?.contemplated_indicator || null,
+        clientRegion: primaryMeta?.client_region || null,
+        collectionStatus: primaryMeta?.collection_status || null,
+        paymentMethod: primaryMeta?.payment_method || null,
+        advisoryName: primaryMeta?.advisory_name || null
       })
     }
 
@@ -203,7 +220,7 @@ export async function GET(req: Request) {
 
     // 5. Merge data into enriched clients
     const enrichedClients = clientsList.map((client: any) => {
-      const score = riskMap.get(client.id) ?? 15
+      const score = riskMap.get(client.id) ?? 54.0
       const contractNumber = contractNumberMap.get(client.id)
       const meta = contractNumber ? metaMap.get(contractNumber) : null
       

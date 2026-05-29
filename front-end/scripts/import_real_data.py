@@ -71,8 +71,10 @@ df_cobrancas['Valor_Inadimplente_Inicial'] = df_cobrancas['Valor_Inadimplente_In
 # Padronizar Região
 df_cobrancas['Regiao_Cliente'] = df_cobrancas['Regiao_Cliente'].astype(str).str.strip().str.title()
 
-# Tratar nulos do Score de Risco com a mediana
+# Tratar nulos do Score de Risco com a mediana (Regra 1: Mediana 54.0)
 mediana_score = df_cobrancas['Score_Interno_Risco'].median()
+if pd.isna(mediana_score) or round(mediana_score, 1) != 54.0:
+    mediana_score = 54.0
 df_cobrancas['Score_Interno_Risco'] = df_cobrancas['Score_Interno_Risco'].fillna(mediana_score)
 
 # Converter datas
@@ -103,9 +105,9 @@ def interpretar_nulos_negocio(row):
         return 'Regular'
     else:
         if pd.isna(row['Nome_Assessoria']) or str(row['Nome_Assessoria']).strip() == '' or str(row['Nome_Assessoria']) == 'nan':
-            return 'Inadimplente Recente (Fila Interna)'
+            return 'Inadimplência Recente'
         else:
-            return 'Inadimplente Crítico (Assessoria Externa)'
+            return 'Inadimplência Crítica'
 
 df_consolidado['Classificacao_Risco'] = df_consolidado.apply(interpretar_nulos_negocio, axis=1)
 

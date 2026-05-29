@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getAuthedUser } from '@/lib/auth'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 export async function POST(req: Request) {
   try {
@@ -49,6 +50,27 @@ export async function POST(req: Request) {
       }
     })
 
+    // Check if any contract is contemplated (Rule 5 & RF 03)
+    let isContemplated = false
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!db.isMock() && supabaseUrl && supabaseServiceRoleKey && contracts.length > 0) {
+      try {
+        const supabase = createSupabaseClient(supabaseUrl, supabaseServiceRoleKey, { auth: { persistSession: false } })
+        const contractNumbers = contracts.map(c => c.contract_number).filter(Boolean)
+        const { data: metaRows } = await supabase
+          .from('contract_metadata')
+          .select('contemplated_indicator')
+          .in('contract_number', contractNumbers)
+        
+        isContemplated = metaRows?.some(m => 
+          ['sim', 'sorteio', 'lance'].includes(String(m.contemplated_indicator || '').toLowerCase().trim())
+        ) ?? false
+      } catch (err) {
+        console.error('Error fetching metadata in prediction engine:', err)
+      }
+    }
+
     // Calculate score (0-100) using a real heuristic
     let score = 15 // base low risk for active clients in good standing
     
@@ -73,6 +95,11 @@ export async function POST(req: Request) {
       if (clientAlerts.length > 0) {
         score = 25
       }
+    }
+
+    // Rule 5: Degrade score immediately (apply risk penalty) after contemplation if they are already delinquent
+    if (isContemplated && overdueCount > 0) {
+      score += 25
     }
 
     // Cap score at 100 and floor at 0

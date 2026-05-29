@@ -188,11 +188,14 @@ export async function GET(req: Request) {
         }
       })
 
+      // Rule 4: Carência de Alerta Ativo (atrasos <= 3 dias úteis)
+      if (maxDaysOverdue <= 3) continue
+
       // Get latest risk score
       const clientRiskScores = riskScores.filter(r => r.client_id === client.id)
       const latestScore = clientRiskScores.length > 0 
         ? clientRiskScores.sort((a, b) => b.computed_at.localeCompare(a.computed_at))[0].score 
-        : 15 // Default low
+        : 54.0 // Default Mediana da carteira (Regra 1)
 
       // Priority formula: Score * Delinquent value
       const priority = latestScore * totalOverdueAmount
@@ -250,7 +253,7 @@ export async function GET(req: Request) {
       }
 
       for (const client of clients) {
-        const score = latestByClient.get(client.id) || 0
+        const score = latestByClient.has(client.id) ? latestByClient.get(client.id)! : 54.0
         if (score < 35) continue
         collectionsQueue.push({
           clientId: client.id,
@@ -289,7 +292,7 @@ export async function GET(req: Request) {
       const alreadyInQueue = collectionsQueue.some(item => item.clientId === client.id)
       if (alreadyInQueue || hasInstallments) continue
 
-      const score = latestByClient.get(client.id) || 0
+      const score = latestByClient.has(client.id) ? latestByClient.get(client.id)! : 54.0
       collectionsQueue.push({
         clientId: client.id,
         name: client.name,

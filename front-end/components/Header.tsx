@@ -19,14 +19,21 @@ export default function Header() {
       .catch(() => setIsMock(true))
   }, [])
 
+  const [role, setRole] = useState('gestao')
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setRole(localStorage.getItem('creditguard_role') || 'gestao')
+    }
+  }, [])
+
   // Close menu on navigation
   useEffect(() => { setMenuOpen(false) }, [pathname])
 
   const navLinks = [
-    { href: '/', label: t('header.dashboard') },
+    ...(role === 'gestao' ? [{ href: '/', label: t('header.dashboard') }] : []),
     { href: '/collections', label: t('header.collections') },
     { href: '/clients', label: t('header.clients') },
-    { href: '/upload', label: t('header.upload') },
+    ...(role === 'gestao' ? [{ href: '/upload', label: t('header.upload') }] : []),
     { href: '/privacy', label: t('header.privacy') },
   ]
 
@@ -79,6 +86,22 @@ export default function Header() {
               : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30'
           }`}>
             {isMock ? t('header.simulated') : t('header.supabase')}
+          </div>
+
+          {/* Actor selector (RF 01) */}
+          <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-1.5 sm:px-2.5 py-1 rounded-lg border border-slate-100 dark:border-slate-800">
+            <span className="hidden sm:inline text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ator:</span>
+            <select
+              value={typeof window !== 'undefined' ? (localStorage.getItem('creditguard_role') || 'gestao') : 'gestao'}
+              onChange={(e) => {
+                localStorage.setItem('creditguard_role', e.target.value)
+                window.location.reload()
+              }}
+              className="bg-transparent text-[11px] sm:text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-200 border-none p-0 outline-none"
+            >
+              <option value="gestao" className="bg-white dark:bg-slate-900">Gestão</option>
+              <option value="operador" className="bg-white dark:bg-slate-900">Operador</option>
+            </select>
           </div>
 
           {/* Language Selector - compact on mobile */}

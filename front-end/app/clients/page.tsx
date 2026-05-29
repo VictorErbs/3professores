@@ -67,7 +67,7 @@ export default function ClientsListPage() {
       const tempScores = new Map<string, RiskDetail>()
       const tempMeta = new Map<string, ClientMeta>()
       for (const client of clientsData) {
-        const score = typeof client.riskScore === 'number' ? client.riskScore : 15
+        const score = typeof client.riskScore === 'number' ? client.riskScore : 54.0
         const severity: 'low' | 'medium' | 'critical' = score >= 70 ? 'critical' : score >= 35 ? 'medium' : 'low'
         tempScores.set(client.id, { score, severity })
         tempMeta.set(client.id, {

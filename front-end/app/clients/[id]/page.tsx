@@ -30,6 +30,11 @@ interface ClientProfile {
     status: 'pending' | 'paid' | 'overdue'
   }>
   riskScore?: number
+  contemplatedIndicator?: string | null
+  clientRegion?: string | null
+  collectionStatus?: string | null
+  paymentMethod?: string | null
+  advisoryName?: string | null
 }
 
 export default function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -119,6 +124,49 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     }
   }
 
+  // Register Contemplation Event (Rule 5)
+  const handleContemplate = async (type: 'Sorteio' | 'Lance' | 'Nao contemplado') => {
+    if (!profile) return
+    setPredicting(true)
+    setPredictMsg('')
+    try {
+      const primaryContract = profile.contracts[0]
+      if (!primaryContract) {
+        throw new Error('Nenhum contrato ativo encontrado para este cliente.')
+      }
+
+      // 1. Update contemplation indicator
+      const resContemplate = await fetch('/api/contracts/contemplate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contractNumber: primaryContract.contract_number,
+          clientId: profile.id,
+          type
+        })
+      })
+      const dataContemplate = await resContemplate.json()
+      if (!resContemplate.ok) throw new Error(dataContemplate.error || 'Erro ao registrar contemplação')
+
+      // 2. Call prediction recalculation immediately (Rule 5)
+      const resPredict = await fetch('/api/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: profile.id })
+      })
+      const dataPredict = await resPredict.json()
+      if (!resPredict.ok) throw new Error(dataPredict.error || 'Erro ao recalcular')
+
+      setPredictMsg(`Contemplação registrada (${type === 'Nao contemplado' ? 'Removida' : type})! Score recalculado para ${dataPredict.score}% (${dataPredict.severity}).`)
+      // Refresh profile data
+      fetchProfile()
+    } catch (e: any) {
+      setPredictMsg('Erro: ' + e.message)
+    } finally {
+      setPredicting(false)
+    }
+  }
+
   if (loading && !profile) {
     return (
       <div className="flex min-h-screen flex-col bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
@@ -158,7 +206,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   // Use the fetched profile risk score from the database if available; fallback to overdue heuristic if unavailable
   const computedScore = typeof profile.riskScore === 'number'
     ? profile.riskScore
-    : (overdueCount > 0 ? Math.min(100, 30 + overdueCount * 20) : 15)
+    : (overdueCount > 0 ? Math.min(100, 30 + overdueCount * 20) : 54.0)
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
@@ -252,10 +300,61 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               </div>
             </div>
 
+            {/* Painel de Contemplação (Regra 5) */}
+            <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm mb-2">Registrar Evento de Contemplação</h3>
+              <p className="text-[11px] text-slate-400 mb-4 leading-relaxed">
+                Registre o sorteio ou lance do consorciado para disparar o recálculo analítico do score imediatamente (Regra de Negócio 5).
+              </p>
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleContemplate('Sorteio')}
+                  className={`flex-1 rounded-xl py-2 text-xs font-bold border transition ${
+                    profile.contemplatedIndicator === 'Sorteio'
+                      ? 'bg-rose-600 border-rose-600 text-white shadow-md shadow-rose-600/10'
+                      : 'bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 text-slate-700 dark:text-slate-300 border-slate-100 dark:border-slate-800'
+                  }`}
+                >
+                  Sorteio
+                </button>
+                <button
+                  onClick={() => handleContemplate('Lance')}
+                  className={`flex-1 rounded-xl py-2 text-xs font-bold border transition ${
+                    profile.contemplatedIndicator === 'Lance'
+                      ? 'bg-rose-600 border-rose-600 text-white shadow-md shadow-rose-600/10'
+                      : 'bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 text-slate-700 dark:text-slate-300 border-slate-100 dark:border-slate-800'
+                  }`}
+                >
+                  Lance
+                </button>
+                <button
+                  onClick={() => handleContemplate('Nao contemplado')}
+                  className={`rounded-xl px-2.5 py-2 text-xs font-bold transition bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 text-slate-400 border border-slate-100 dark:border-slate-800`}
+                  title="Remover Contemplação"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
           </div>
 
           {/* Right Column: Contracts & Installments Timeline */}
           <div className="lg:col-span-2 space-y-6">
+
+            {/* RF 03: Sinalização de Risco Pós-Contemplação */}
+            {profile.contemplatedIndicator && computedScore >= 50 && (
+              <div className="rounded-2xl border border-rose-500 bg-rose-50/70 p-5 dark:bg-rose-950/20 animate-pulse flex gap-4 items-center shadow-lg shadow-rose-500/10">
+                <span className="text-3xl">🚨</span>
+                <div>
+                  <h4 className="font-extrabold text-rose-800 dark:text-rose-400 text-xs uppercase tracking-wider">RISCO CRÍTICO PÓS-CONTEMPLAÇÃO DETECTADO (RF 03)</h4>
+                  <p className="text-xs text-rose-700 dark:text-rose-400/80 mt-1.5 leading-relaxed">
+                    Este consorciado foi contemplado por <strong>{profile.contemplatedIndicator}</strong>, mas apresenta degradação severa no score analítico ({computedScore}%). Risco elevado de inadimplência após a liberação do bem!
+                  </p>
+                </div>
+              </div>
+            )}
             
             {/* Delinquency Warning Header */}
             {overdueCount > 0 && (
