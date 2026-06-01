@@ -235,6 +235,27 @@ prob_atraso_baixo_score = df_cobrancas['Score_Interno_Risco'] < 30
 print(f"Probabilidade de atraso para score < 30: {prob_atraso_baixo_score.mean():.2%}")
 ```
 
+## Eficiência das Assessorias e Compensação Variável
+
+```python
+# Agregação por assessoria
+agency_perf = df_cobrancas.groupby('Nome_Assessoria').agg(
+    Total_Assigned=('Valor_Inadimplente_Inicial', 'sum'),
+    Total_Recovered=('Valor_Inadimplente_Inicial', lambda x: x[df_cobrancas.loc[x.index, 'Status_Cobranca'] == 'Acordo Firmado'].sum()),
+    Num_Contracts=('ID_Contrato', 'count'),
+    Avg_Days_Overdue=('Dias_Em_Atraso_Inicial', 'mean')
+)
+agency_perf['Recovery_Rate'] = (agency_perf['Total_Recovered'] / agency_perf['Total_Assigned']) * 100
+agency_perf = agency_perf.sort_values('Recovery_Rate', ascending=False)
+print(agency_perf.to_string(float_format="%.2f"))
+```
+
+**Proposta de compensação variável:**  
+- Recovery Rate > 60% → fee +15%  
+- Recovery Rate > 50% → fee +10%  
+- Recovery Rate > 40% → fee +5%  
+- Abaixo de 40% → sem bônus
+
 ## Dashboard stakeholders
 
 - **Diretoria** – foco em KPIs de alto nível (inadimplência, recuperação).  

@@ -58,6 +58,13 @@ print("\n--- Primeiras linhas da base de Cobrança e Assessorias ---", flush=Tru
 print(df_cobrancas.head(3), flush=True)
 
 # ── 4. Data Cleaning and Processing ───────────────────────────────────────
+print("\n--- Análise Exploratória ---", flush=True)
+print("Resumo estatístico (Cobrança Assessorias):", flush=True)
+print(df_cobrancas.describe(include='all'), flush=True)
+print("\nValores ausentes:", flush=True)
+print(df_cobrancas.isna().sum(), flush=True)
+print("\n--- Distribuição por região ---", flush=True)
+print(df_cobrancas['Regiao_Cliente'].value_counts(), flush=True)
 print("\n--- Processando e limpando dados ---", flush=True)
 
 # Clean Valor_Inadimplente_Inicial
@@ -129,6 +136,24 @@ print("\n=== RESULTADOS DOS KPIS GLOBAIS ===", flush=True)
 print(f"Taxa de Inadimplência (Financeiro): {kpi_inadimplencia:.2f}%", flush=True)
 print(f"Taxa de Recuperação (Operação): {kpi_recuperacao:.2f}%", flush=True)
 print(f"Atraso Médio da Carteira (Operação): {kpi_atraso_medio:.1f} dias", flush=True)
+
+# ── 5.1 Agency Performance Analysis (for compensation model) ──────────────
+if 'Nome_Assessoria' in df_cobrancas.columns:
+    agency_perf = df_cobrancas.groupby('Nome_Assessoria').agg(
+        Total_Assigned=('Valor_Inadimplente_Inicial', 'sum'),
+        Total_Recovered=('Valor_Inadimplente_Inicial', lambda x: x[df_cobrancas.loc[x.index, 'Status_Cobranca'] == 'Acordo Firmado'].sum()),
+        Num_Contracts=('ID_Contrato', 'count'),
+        Avg_Days_Overdue=('Dias_Em_Atraso_Inicial', 'mean')
+    )
+    agency_perf['Recovery_Rate'] = (agency_perf['Total_Recovered'] / agency_perf['Total_Assigned']) * 100
+    agency_perf = agency_perf.sort_values('Recovery_Rate', ascending=False)
+    print("\n=== ANÁLISE DE EFICIÊNCIA DE ASSESSORIAS ===", flush=True)
+    print(agency_perf.to_string(float_format="%.2f"), flush=True)
+    print("\n--- Sugestão de Compensação Variável ---", flush=True)
+    print("Recovery Rate > 60%: fee +15%", flush=True)
+    print("Recovery Rate > 50%: fee +10%", flush=True)
+    print("Recovery Rate > 40%: fee +5%", flush=True)
+    print("Below 40%: no bonus", flush=True)
 
 # Região Risco
 risco_regional = df_consolidado.groupby('Regiao_Cliente').agg(
