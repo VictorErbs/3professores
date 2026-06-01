@@ -65,6 +65,10 @@ print("\nValores ausentes:", flush=True)
 print(df_cobrancas.isna().sum(), flush=True)
 print("\n--- Distribuição por região ---", flush=True)
 print(df_cobrancas['Regiao_Cliente'].value_counts(), flush=True)
+# Distribuição de score de risco por região
+print("\n--- Score médio por região ---", flush=True)
+risk_by_region = df_cobrancas.groupby('Regiao_Cliente')['Score_Interno_Risco'].mean().sort_values(ascending=False)
+print(risk_by_region, flush=True)
 print("\n--- Processando e limpando dados ---", flush=True)
 
 # Clean Valor_Inadimplente_Inicial
@@ -180,6 +184,19 @@ tendencia_temporal['Ano_Mes_Vencimento'] = tendencia_temporal['Ano_Mes_Venciment
 
 print("\n=== KPI TENDÊNCIA TEMPORAL (Visão de Caixa) ===", flush=True)
 print(tendencia_temporal, flush=True)
+
+# ── 5.2 Patterns and Insights ──────────────────────────────────────────────
+print("\n=== PADRÕES IDENTIFICADOS ===", flush=True)
+total_inadimplente_por_regiao = df_cobrancas.groupby('Regiao_Cliente')['Valor_Inadimplente_Inicial'].sum().sort_values(ascending=False)
+print("Total inadimplente por região:", total_inadimplente_por_regiao, sep='\n')
+contratos_criticos = df_cobrancas[df_cobrancas['Score_Interno_Risco'] < 30]
+print(f"Contratos críticos (score < 30): {len(contratos_criticos)}")
+
+print("\n=== INSIGHTS ===", flush=True)
+inadimplencia_sudeste = df_cobrancas[df_cobrancas['Regiao_Cliente'] == 'Sudeste']
+print(f"Insight 1 – Inadimplência no Sudeste: {len(inadimplencia_sudeste)} contratos")
+prob_atraso_baixo_score = df_cobrancas['Score_Interno_Risco'] < 30
+print(f"Insight 2 – Probabilidade de atraso p/ score < 30: {prob_atraso_baixo_score.mean():.2%}")
 
 # ── 6. Matplotlib & Seaborn Visualization ─────────────────────────────────
 print("\n--- Gerando e salvando gráficos de análise ---", flush=True)
