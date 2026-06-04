@@ -611,11 +611,10 @@ export async function GET() {
     ]
 
     const finalAdvisoryStats = [
-      { name: 'ASSESSORIA ALFA', recoveryRate: 48.72, totalSent: 4890000, recoveredAmount: 2380000, averageDelay: 113.9, averageRiskScore: 612.3, difficultyFactor: 1.0, adjustedEfficiency: 48.72 },
-      { name: 'ASSESSORIA BETA', recoveryRate: 41.36, totalSent: 4130000, recoveredAmount: 1710000, averageDelay: 113.9, averageRiskScore: 612.3, difficultyFactor: 1.0, adjustedEfficiency: 41.36 },
-      { name: 'ASSESSORIA GAMA', recoveryRate: 33.95, totalSent: 3280000, recoveredAmount: 1120000, averageDelay: 113.9, averageRiskScore: 612.3, difficultyFactor: 1.0, adjustedEfficiency: 33.95 },
-      { name: 'ASSESSORIA DELTA', recoveryRate: 27.18, totalSent: 2260000, recoveredAmount: 610000, averageDelay: 113.9, averageRiskScore: 612.3, difficultyFactor: 1.0, adjustedEfficiency: 27.18 },
-      { name: 'ASSESSORIA EPSILON', recoveryRate: 18.64, totalSent: 1330000, recoveredAmount: 250000, averageDelay: 113.9, averageRiskScore: 612.3, difficultyFactor: 1.0, adjustedEfficiency: 18.64 }
+      { name: 'FÊNIX RECUPERAÇÃO DE CRÉDITO', recoveryRate: 58.40, totalSent: 5120000, recoveredAmount: 2990000, averageDelay: 98.2, averageRiskScore: 589.4, difficultyFactor: 0.89, adjustedEfficiency: 65.62 },
+      { name: 'ACERTA CRÉDITO INTEGRADO', recoveryRate: 48.72, totalSent: 4890000, recoveredAmount: 2380000, averageDelay: 113.9, averageRiskScore: 612.3, difficultyFactor: 1.0, adjustedEfficiency: 48.72 },
+      { name: 'NEXUS MEDIAÇÃO FINANCEIRA', recoveryRate: 41.36, totalSent: 4130000, recoveredAmount: 1710000, averageDelay: 108.5, averageRiskScore: 598.7, difficultyFactor: 0.96, adjustedEfficiency: 43.08 },
+      { name: 'VÉRTICE ASSET & COBRANÇA', recoveryRate: 33.95, totalSent: 3280000, recoveredAmount: 1120000, averageDelay: 121.3, averageRiskScore: 635.8, difficultyFactor: 1.08, adjustedEfficiency: 31.44 }
     ]
 
     return NextResponse.json({
