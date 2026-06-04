@@ -73,7 +73,7 @@ export async function GET(req: Request) {
           ...client,
           contracts,
           installments: clientInstallments,
-          riskScore: riskScoreObj?.score ?? 54.0
+          riskScore: riskScoreObj?.score ?? 46.0
         })
       }
 
@@ -111,7 +111,7 @@ export async function GET(req: Request) {
         ...client,
         contracts: contracts || [],
         installments,
-        riskScore: riskScores?.[0]?.score ?? 54.0,
+        riskScore: riskScores?.[0]?.score ?? 46.0,
         contemplatedIndicator: primaryMeta?.contemplated_indicator || null,
         clientRegion: primaryMeta?.client_region || null,
         collectionStatus: primaryMeta?.collection_status || null,
@@ -220,7 +220,7 @@ export async function GET(req: Request) {
 
     // 5. Merge data into enriched clients
     const enrichedClients = clientsList.map((client: any) => {
-      const score = riskMap.get(client.id) ?? 54.0
+      const score = riskMap.get(client.id) ?? 46.0
       const contractNumber = contractNumberMap.get(client.id)
       const meta = contractNumber ? metaMap.get(contractNumber) : null
       

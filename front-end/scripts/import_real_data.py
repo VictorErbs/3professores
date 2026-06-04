@@ -513,9 +513,26 @@ for contract in contracts:
     # Fetch cleaned risk score from CSV
     csv_row = df_cobrancas[df_cobrancas['ID_Contrato'] == contract_number]
     if not csv_row.empty:
-        score = float(csv_row.iloc[0]['Score_Interno_Risco'])
+        score = 100.0 - float(csv_row.iloc[0]['Score_Interno_Risco'])
     else:
-        score = float(min(100, round(overdue_count * 18 + max_days_overdue * 0.35)))
+        score = 46.0
+
+    if overdue_count > 0:
+        # Heuristic risk score calculation
+        score = 30.0 + (overdue_count * 20.0)
+        if max_days_overdue > 90:
+            score += 15.0
+        elif max_days_overdue > 30:
+            score += 10.0
+        elif max_days_overdue > 10:
+            score += 5.0
+
+        # Check if contemplated
+        meta = contract_metadata_dict.get(contract_number)
+        if meta and meta.get('contemplated_indicator') and str(meta['contemplated_indicator']).lower().strip() in ['sim', 'sorteio', 'lance']:
+            score += 25.0
+
+        score = min(100.0, max(0.0, score))
 
     risk_scores.append({
         'client_id': contract['client_id'],
@@ -614,6 +631,7 @@ def clean_nans(obj):
 print("\n--- Iniciando upload em lote (lotes de 500 registros) ---", flush=True)
 
 def insert_in_batches(table, rows, size=500, upsert=False, on_conflict=None):
+    import time
     if not rows:
         return
     
@@ -639,16 +657,21 @@ def insert_in_batches(table, rows, size=500, upsert=False, on_conflict=None):
         req_body = json.dumps(sanitized_chunk).encode('utf-8')
         req = urllib.request.Request(url, data=req_body, headers=headers, method='POST')
         
-        try:
-            with urllib.request.urlopen(req) as response:
-                print(f"[{table}] lote {batch_num}/{total_batches}", flush=True)
-        except urllib.error.HTTPError as e:
-            print(f"Erro no lote {batch_num} de {table}: {e.code}", file=sys.stderr, flush=True)
-            print(e.read().decode('utf-8'), file=sys.stderr, flush=True)
-            raise e
-        except Exception as e:
-            print(f"Erro no lote {batch_num} de {table}: {str(e)}", file=sys.stderr, flush=True)
-            raise e
+        max_attempts = 5
+        for attempt in range(1, max_attempts + 1):
+            try:
+                with urllib.request.urlopen(req) as response:
+                    print(f"[{table}] lote {batch_num}/{total_batches}", flush=True)
+                time.sleep(0.05)  # small gap to prevent rate limit
+                break
+            except Exception as e:
+                print(f"Erro no lote {batch_num} de {table} (tentativa {attempt}/{max_attempts}): {str(e)}", file=sys.stderr, flush=True)
+                if attempt == max_attempts:
+                    if isinstance(e, urllib.error.HTTPError):
+                        print(e.read().decode('utf-8'), file=sys.stderr, flush=True)
+                    raise e
+                time.sleep(1.0 * attempt)  # exponential backoff
+
 
 # Upload all operational tables in sequence
 insert_in_batches('source_cobranca_assessorias', cobranca_payload, 500)

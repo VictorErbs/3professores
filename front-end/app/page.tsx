@@ -14,6 +14,9 @@ interface KPI {
   criticalClients: number
   totalActiveContracts: number
   averageDelay?: number
+  totalRecovered: number
+  totalValue: number
+  totalSent: number
 }
 
 interface Alert {
@@ -121,15 +124,52 @@ export default function DashboardPage() {
       <Header />
 
       <main className="mx-auto w-full max-w-7xl px-4 sm:px-6 py-6 sm:py-8 flex-1">
-        {/* Welcome Area */}
-        <div className="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+        <div className="mb-6 rounded-2xl bg-[#08214d] p-6 text-white shadow-md flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white uppercase">
               {t('dashboard.title')}
             </h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-xs sm:text-sm text-blue-200/90 font-medium">
               {t('dashboard.subtitle')}
             </p>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 text-[10px] sm:text-xs font-semibold">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-900/50 text-blue-200">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <div className="space-y-0.5">
+                <h4 className="font-extrabold tracking-wider text-white uppercase text-[10px]">APOIO À DIRETORIA</h4>
+                <p className="text-[9px] text-blue-200/70 font-normal leading-tight">Visão estratégica da carteira<br />e dos resultados</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-900/50 text-blue-200">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M12 16v1" />
+                </svg>
+              </div>
+              <div className="space-y-0.5">
+                <h4 className="font-extrabold tracking-wider text-white uppercase text-[10px]">APOIO AO FINANCEIRO</h4>
+                <p className="text-[9px] text-blue-200/70 font-normal leading-tight">Impacto financeiro da inadimplência<br />e recuperação</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-blue-900/50 text-blue-200">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              </div>
+              <div className="space-y-0.5">
+                <h4 className="font-extrabold tracking-wider text-white uppercase text-[10px]">APOIO À OPERAÇÃO</h4>
+                <p className="text-[9px] text-blue-200/70 font-normal leading-tight">Acompanhamento da cobrança<br />e desempenho das assessorias</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -139,1215 +179,548 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Loading Skeleton */}
         {loading && !kpis ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 animate-pulse mb-6 sm:mb-8">
-            {[1, 2, 3, 4].map(n => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 sm:gap-6 animate-pulse mb-6 sm:mb-8">
+            {[1, 2, 3, 4, 5].map(n => (
               <div key={n} className="h-28 sm:h-32 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-800" />
             ))}
           </div>
         ) : kpis ? (
           <>
-            {/* KPI Overview */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8">
-              {/* Volume em Risco */}
-              <div className="rounded-2xl sm:rounded-3xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex justify-between items-center mb-2 sm:mb-3">
-                  <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">{t('dashboard.kpiVolumeAtRisk')}</span>
-                  <span className="text-lg sm:text-xl">🚨</span>
-                </div>
-                <h3 className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400">
-                  R$ {kpis.totalOverdue.toLocaleString('pt-BR')}
-                </h3>
-                <p className="text-[11px] sm:text-xs text-slate-400 mt-1 sm:mt-2">{t('dashboard.kpiVolumeAtRiskDesc')}</p>
-              </div>
-
-              {/* Taxa de Inadimplência */}
-              <div className="rounded-2xl sm:rounded-3xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex justify-between items-center mb-2 sm:mb-3">
-                  <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">{t('dashboard.kpiDelinquency')}</span>
-                  <span className="text-lg sm:text-xl">📈</span>
-                </div>
-                <h3 className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-500">
-                  {kpis.delinquencyRate}%
-                </h3>
-                <p className="text-[11px] sm:text-xs text-slate-400 mt-1 sm:mt-2">{t('dashboard.kpiDelinquencyDesc')}</p>
-              </div>
-
-              {/* Taxa de Recuperação */}
-              <div className="rounded-2xl sm:rounded-3xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex justify-between items-center mb-2 sm:mb-3">
-                  <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">{t('dashboard.kpiRecovery')}</span>
-                  <span className="text-lg sm:text-xl">🛡️</span>
-                </div>
-                <h3 className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                  {kpis.recoveryRate}%
-                </h3>
-                <p className="text-[11px] sm:text-xs text-slate-400 mt-1 sm:mt-2">{t('dashboard.kpiRecoveryDesc')}</p>
-              </div>
-
-              {/* Clientes Críticos */}
-              <div className="rounded-2xl sm:rounded-3xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex justify-between items-center mb-2 sm:mb-3">
-                  <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">{t('dashboard.kpiCritical')}</span>
-                  <span className="text-lg sm:text-xl">⚠️</span>
-                </div>
-                <h3 className="text-xl sm:text-2xl font-black text-indigo-600 dark:text-indigo-400">
-                  {t('dashboard.clientsCount', { count: kpis.criticalClients })}
-                </h3>
-                <p className="text-[11px] sm:text-xs text-slate-400 mt-1 sm:mt-2">{t('dashboard.kpiCriticalDesc')}</p>
-              </div>
-
-              {/* KPI: Atraso Médio */}
-              <div className="rounded-2xl sm:rounded-3xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex justify-between items-center mb-2 sm:mb-3">
-                  <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">{t('dashboard.kpiAverageDelay')}</span>
-                  <span className="text-lg sm:text-xl">⏱️</span>
-                </div>
-                <h3 className="text-xl sm:text-2xl font-black text-violet-600 dark:text-violet-400">
-                  {kpis.averageDelay ?? 67} {t('dashboard.projectionTableMonth') === 'Mês' ? 'dias' : 'days'}
-                </h3>
-                <p className="text-[11px] sm:text-xs text-slate-400 mt-1 sm:mt-2">{t('dashboard.kpiAverageDelayDesc')}</p>
-              </div>
+            <div className="mb-4">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                PRINCIPAIS INDICADORES (KPIs)
+              </h2>
             </div>
 
-            {/* Content Body Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-              
-              {/* Cash Flow Projection (Left & Middle Column) */}
-              <div className="lg:col-span-2 space-y-6 sm:space-y-8">
-                 <div className="rounded-2xl sm:rounded-3xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                   <div className="flex items-center justify-between gap-4 mb-4 sm:mb-6">
-                     <div>
-                       <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white">{t('dashboard.priorityTitle')}</h3>
-                       <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">{t('dashboard.prioritySubtitle')}</p>
-                     </div>
-                   </div>
-
-                   <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                     <div className="rounded-xl sm:rounded-2xl border border-rose-100 bg-rose-50/70 p-3 sm:p-4 dark:border-rose-900/30 dark:bg-rose-950/20">
-                       <p className="text-[9px] sm:text-[10px] uppercase tracking-wider text-rose-400 font-bold">{t('dashboard.priorityCritical')}</p>
-                       <p className="text-base sm:text-lg font-black text-rose-600 dark:text-rose-400">{alertStats.critical}</p>
-                     </div>
-                     <div className="rounded-xl sm:rounded-2xl border border-amber-100 bg-amber-50/70 p-3 sm:p-4 dark:border-amber-900/30 dark:bg-amber-950/20">
-                       <p className="text-[9px] sm:text-[10px] uppercase tracking-wider text-amber-500 font-bold">{t('dashboard.priorityMedium')}</p>
-                       <p className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400">{alertStats.medium}</p>
-                     </div>
-                     <div className="rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50/70 p-3 sm:p-4 dark:border-slate-800 dark:bg-slate-950/30">
-                       <p className="text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-400 font-bold">{t('dashboard.priorityTotal')}</p>
-                       <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white">{alertStats.total}</p>
-                     </div>
-                   </div>
-
-                   <div className="mt-4 sm:mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                     <div className="rounded-xl sm:rounded-2xl border border-slate-100 dark:border-slate-800 p-3 sm:p-4">
-                       <h4 className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-2 sm:mb-3">{t('dashboard.priorityIndicators')}</h4>
-                       <div className="space-y-1.5 sm:space-y-2 text-[11px] sm:text-xs">
-                         <div className="flex items-center justify-between">
-                           <span className="text-slate-500">{t('dashboard.kpiVolumeAtRisk')}</span>
-                           <span className="font-bold text-slate-900 dark:text-white">R$ {kpis ? kpis.totalOverdue.toLocaleString('pt-BR') : 0}</span>
-                         </div>
-                         <div className="flex items-center justify-between">
-                           <span className="text-slate-500">{t('dashboard.kpiDelinquency')}</span>
-                           <span className="font-bold text-slate-900 dark:text-white">{kpis ? kpis.delinquencyRate : 0}%</span>
-                         </div>
-                         <div className="flex items-center justify-between">
-                           <span className="text-slate-500">{t('dashboard.kpiRecovery')}</span>
-                           <span className="font-bold text-slate-900 dark:text-white">{kpis ? kpis.recoveryRate : 0}%</span>
-                         </div>
-                         <div className="flex items-center justify-between">
-                           <span className="text-slate-500">{t('dashboard.kpiCritical')}</span>
-                           <span className="font-bold text-slate-900 dark:text-white">{kpis ? kpis.criticalClients : 0}</span>
-                         </div>
-                         <div className="flex items-center justify-between">
-                           <span className="text-slate-500">{t('dashboard.kpiAverageDelay')}</span>
-                           <span className="font-bold text-slate-900 dark:text-white">{kpis && kpis.averageDelay ? kpis.averageDelay : 67} {t('dashboard.projectionTableMonth') === 'Mês' ? 'dias' : 'days'}</span>
-                         </div>
-                       </div>
-                     </div>
-
-                     <div className="rounded-xl sm:rounded-2xl border border-slate-100 dark:border-slate-800 p-3 sm:p-4">
-                       <h4 className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-2 sm:mb-3">{t('dashboard.priorityRecent')}</h4>
-                       {alerts.length === 0 ? (
-                         <p className="text-[11px] sm:text-xs text-slate-500">{t('dashboard.priorityEmpty')}</p>
-                       ) : (
-                         <div className="space-y-1.5 sm:space-y-2">
-                         {alerts.slice(0, 4).map((alert) => (
-                               <Link key={alert.id} href={`/clients/${alert.client_id}`} className="flex items-center justify-between text-[11px] sm:text-xs hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg px-1.5 sm:px-2 py-1 sm:py-1.5 -mx-1.5 sm:-mx-2 transition">
-                                 <span className="text-slate-600 dark:text-slate-300 truncate max-w-[140px] sm:max-w-[180px]">{alert.message}</span>
-                                 <span className={`text-[9px] sm:text-[10px] uppercase font-bold ${
-                                   alert.severity === 'critical'
-                                     ? 'text-rose-600 dark:text-rose-400'
-                                     : alert.severity === 'medium'
-                                     ? 'text-amber-600 dark:text-amber-400'
-                                     : 'text-emerald-600 dark:text-emerald-400'
-                                 }`}>
-                                   {alert.severity}
-                                 </span>
-                               </Link>
-                             ))}
-                         </div>
-                       )}
-                     </div>
-                   </div>
-                 </div>
-            {/* Regional Risk Analysis Section */}
-            <div className="rounded-2xl sm:rounded-3xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <div className="mb-6">
-                <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>🗺️</span> {t('dashboard.regionalRiskTitle')}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+                <h3 className="text-[10px] font-bold text-slate-500 uppercase text-center min-h-[30px] flex items-center justify-center">
+                  TAXA DE INADIMPLÊNCIA FINANCEIRA
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                  {t('dashboard.regionalRiskSubtitle')}
+                <div className="flex items-center justify-center gap-3 my-3">
+                  <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-600 text-white font-extrabold text-lg shadow-sm">
+                    %
+                  </div>
+                  <span className="text-2xl font-black text-rose-600 dark:text-rose-400">
+                    {kpis ? `${kpis.delinquencyRate.toFixed(2).replace('.', ',')}%` : '--'}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 text-center font-semibold mb-3">
+                  % do valor da carteira
                 </p>
-              </div>
-
-              {/* Highlight Cards Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                {/* Highest Delinquency Region */}
-                <div className="rounded-xl sm:rounded-2xl border border-rose-100 bg-rose-50/50 p-4 dark:border-rose-950/20 dark:bg-rose-950/10 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-[10px] sm:text-xs font-bold text-rose-500 uppercase tracking-wider">{t('dashboard.highestDelinquencyRegionLabel')}</p>
-                    <h4 className="text-xl sm:text-2xl font-black text-rose-700 dark:text-rose-400">
-                      {highestDelinquencyRegion}
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {t('dashboard.volumeAtRiskLabel')}: <span className="font-bold text-rose-600 dark:text-rose-400">
-                        R$ {(regionalStats.find(r => r.region === highestDelinquencyRegion)?.volumeAtRisk || 145200).toLocaleString('pt-BR')}
-                      </span>
-                    </p>
-                  </div>
-                  <div className="text-3xl sm:text-4xl">👑</div>
-                </div>
-
-                {/* Highest Risk Region */}
-                <div className="rounded-xl sm:rounded-2xl border border-amber-100 bg-amber-50/50 p-4 dark:border-amber-950/20 dark:bg-amber-950/10 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-[10px] sm:text-xs font-bold text-amber-600 uppercase tracking-wider">{t('dashboard.highestRiskRegionLabel')}</p>
-                    <h4 className="text-xl sm:text-2xl font-black text-amber-700 dark:text-amber-400">
-                      {highestRiskRegion}
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {t('dashboard.delinquencyRateLabel')}: <span className="font-bold text-amber-600 dark:text-amber-400">
-                        {regionalStats.find(r => r.region === highestRiskRegion)?.riskRate || 42}%
-                      </span>
-                    </p>
-                  </div>
-                  <div className="text-3xl sm:text-4xl">⚡</div>
+                <div className="flex justify-center">
+                  <span className="rounded-full bg-rose-50 border border-rose-100 px-3 py-1 text-[9px] font-bold text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30">
+                    Diretoria e Financeiro
+                  </span>
                 </div>
               </div>
 
-              {/* Ranking and SVG Chart Container */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
-                {/* Visual Ranking List */}
-                <div className="space-y-4">
-                  <h4 className="text-xs sm:text-sm font-extrabold text-slate-400 uppercase tracking-wider mb-2">
-                    📊 {t('dashboard.projectionTableScenario')} / Ranking
-                  </h4>
-                  <div className="space-y-3">
-                    {regionalStats.map((item, idx) => (
-                      <div
-                        key={item.region}
-                        className="flex flex-col space-y-1 rounded-xl p-2 hover:bg-slate-50 dark:hover:bg-slate-800/35 transition cursor-pointer"
-                        onMouseEnter={() => setHoveredRegion(item.region)}
-                        onMouseLeave={() => setHoveredRegion(null)}
-                      >
-                        <div className="flex justify-between items-center text-xs sm:text-sm">
-                          <span className="font-bold text-slate-700 dark:text-slate-300">
-                            {idx + 1}. {item.region}
-                          </span>
-                          <span className="font-black text-slate-900 dark:text-white">
-                            {item.riskRate}% {t('dashboard.delinquencyRateLabel')}
-                          </span>
-                        </div>
-                        {/* Progress Bar */}
-                        <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-700`}
-                            style={{
-                              width: `${item.riskRate}%`,
-                              background: idx % 2 === 0
-                                ? 'linear-gradient(90deg, #f59e0b, #ef4444)'
-                                : 'linear-gradient(90deg, #6366f1, #a855f7)'
-                            }}
-                          />
-                        </div>
-                        <div className="flex justify-between text-[10px] text-slate-400">
-                          <span>{t('dashboard.averageRiskScoreLabel')}: {item.averageScore}</span>
-                          <span>{t('dashboard.volumeAtRiskLabel')}: R$ {item.volumeAtRisk.toLocaleString('pt-BR')}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* SVG Chart */}
-                <div className="p-4 rounded-2xl border border-slate-50 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-950/20 flex flex-col justify-center items-center">
-                  <h4 className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
-                    {t('dashboard.delinquencyRateLabel')} (PT-BR) / Regional Risk Rate (%)
-                  </h4>
-                  <div className="w-full max-w-[450px]">
-                    <svg viewBox="0 0 500 220" className="w-full h-auto overflow-visible">
-                      <line x1="100" y1="10" x2="100" y2="190" stroke="rgba(148, 163, 184, 0.2)" strokeWidth="2" />
-                      
-                      {regionalStats.map((item, idx) => {
-                        const y = 20 + idx * 36
-                        const barWidth = (item.riskRate / 100) * 350
-                        const isHovered = hoveredRegion === item.region
-                        
-                        return (
-                          <g
-                            key={item.region}
-                            className="group cursor-pointer"
-                            onMouseEnter={() => setHoveredRegion(item.region)}
-                            onMouseLeave={() => setHoveredRegion(null)}
-                          >
-                            <text
-                              x="90"
-                              y={y + 14}
-                              textAnchor="end"
-                              className={`text-xs font-bold transition ${
-                                isHovered ? 'fill-indigo-600 dark:fill-indigo-400 text-sm' : 'fill-slate-500 dark:fill-slate-400'
-                              }`}
-                            >
-                              {item.region}
-                            </text>
-                            
-                            <rect
-                              x="100"
-                              y={y}
-                              width="350"
-                              height="20"
-                              rx="6"
-                              className="fill-slate-100 dark:fill-slate-800/40"
-                            />
-                            
-                            <rect
-                              x="100"
-                              y={y}
-                              width={barWidth}
-                              height="20"
-                              rx="6"
-                              className="transition-all duration-300"
-                              fill={idx % 2 === 0 ? "url(#regionGrad1)" : "url(#regionGrad2)"}
-                              opacity={isHovered ? 0.95 : 0.8}
-                            />
-                            
-                            <text
-                              x={100 + barWidth + 10}
-                              y={y + 14}
-                              className={`text-xs font-extrabold transition ${
-                                isHovered ? 'fill-indigo-600 dark:fill-indigo-400 text-sm scale-105' : 'fill-slate-700 dark:fill-slate-300'
-                              }`}
-                            >
-                              {item.riskRate}%
-                            </text>
-                          </g>
-                        )
-                      })}
-                      
-                      <defs>
-                        <linearGradient id="regionGrad1" x1="0" y1="0" x2="1" y2="0">
-                          <stop offset="0%" stopColor="#f59e0b" />
-                          <stop offset="100%" stopColor="#ef4444" />
-                        </linearGradient>
-                        <linearGradient id="regionGrad2" x1="0" y1="0" x2="1" y2="0">
-                          <stop offset="0%" stopColor="#6366f1" />
-                          <stop offset="100%" stopColor="#a855f7" />
-                        </linearGradient>
-                      </defs>
+              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+                <h3 className="text-[10px] font-bold text-slate-500 uppercase text-center min-h-[30px] flex items-center justify-center">
+                  TAXA DE RECUPERAÇÃO
+                </h3>
+                <div className="flex items-center justify-center gap-3 my-3">
+                  <div className="h-10 w-10 flex items-center justify-center rounded-full bg-[#10b981] text-white shadow-sm">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17" />
                     </svg>
                   </div>
+                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                    {kpis ? `${kpis.recoveryRate.toFixed(2).replace('.', ',')}%` : '--'}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 text-center font-semibold mb-3">
+                  % sobre o valor enviado
+                </p>
+                <div className="flex justify-center">
+                  <span className="rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1 text-[9px] font-bold text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30">
+                    Diretoria, Financeiro e Operação
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+                <h3 className="text-[10px] font-bold text-slate-500 uppercase text-center min-h-[30px] flex items-center justify-center">
+                  ATRASO MÉDIO
+                </h3>
+                <div className="flex items-center justify-center gap-3 my-3">
+                  <div className="h-10 w-10 flex items-center justify-center rounded-full bg-[#08214d] text-white shadow-sm">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <span className="text-2xl font-black text-[#08214d] dark:text-blue-400">
+                    {kpis ? `${(kpis.averageDelay || 0).toFixed(1).replace('.', ',')} dias` : '--'}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 text-center font-semibold mb-3">
+                  Média dos contratos inadimplentes
+                </p>
+                <div className="flex justify-center">
+                  <span className="rounded-full bg-blue-50 border border-blue-100 px-3 py-1 text-[9px] font-bold text-blue-800 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30">
+                    Operação de Cobrança
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+                <h3 className="text-[10px] font-bold text-slate-500 uppercase text-center min-h-[30px] flex items-center justify-center">
+                  VALOR TOTAL INADIMPLENTE
+                </h3>
+                <div className="flex items-center justify-center gap-3 my-3">
+                  <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-600 text-white shadow-sm">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M20 12V8H4v4m16 0v8H4v-8m16 0H4m12-4V4H8v4m4 4v4m0 0l-2-2m2 2l2-2" />
+                    </svg>
+                  </div>
+                  <span className="text-[15px] xl:text-[17px] font-black text-rose-600 dark:text-rose-400 text-center">
+                    {kpis ? `R$ ${kpis.totalOverdue.toLocaleString('pt-BR')},00` : '--'}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 text-center font-semibold mb-3">
+                  Em parcelas inadimplentes
+                </p>
+                <div className="flex justify-center">
+                  <span className="rounded-full bg-rose-50 border border-rose-100 px-3 py-1 text-[9px] font-bold text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30">
+                    Diretoria e Financeiro
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+                <h3 className="text-[10px] font-bold text-slate-500 uppercase text-center min-h-[30px] flex items-center justify-center">
+                  VALOR TOTAL RECUPERADO ESTIMADO
+                </h3>
+                <div className="flex items-center justify-center gap-3 my-3">
+                  <div className="h-10 w-10 flex items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M12 16v1" />
+                    </svg>
+                  </div>
+                  <span className="text-[15px] xl:text-[17px] font-black text-emerald-600 dark:text-emerald-400 text-center">
+                    {kpis ? `R$ ${kpis.totalRecovered.toLocaleString('pt-BR')}` : '--'}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 text-center font-semibold mb-3">
+                  Valor recuperado estimado
+                </p>
+                <div className="flex justify-center">
+                  <span className="rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1 text-[9px] font-bold text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30">
+                    Diretoria e Financeiro
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Temporal Trend & Evolution Section */}
-            <div className="rounded-2xl sm:rounded-3xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <div className="lg:col-span-1 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
                 <div>
-                  <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>📈</span> {t('dashboard.timeTrendTitle')}
+                  <h3 className="text-sm font-bold text-[#08214d] dark:text-blue-400 uppercase text-center mb-6">
+                    RESUMO FINANCEIRO
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                    {t('dashboard.timeTrendSubtitle')}
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between py-1.5 border-b border-slate-50 dark:border-slate-800">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 flex items-center justify-center rounded-full bg-[#08214d] text-white">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                          </svg>
+                        </div>
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Valor total da carteira</span>
+                      </div>
+                      <span className="text-xs font-black text-slate-900 dark:text-white">
+                        R$ {kpis ? kpis.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '--'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between py-1.5 border-b border-slate-50 dark:border-slate-800">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 flex items-center justify-center rounded-full bg-rose-600 text-white">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        </div>
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Valor total inadimplente</span>
+                      </div>
+                      <span className="text-xs font-black text-slate-900 dark:text-white">
+                        R$ {kpis ? kpis.totalOverdue.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '--'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between py-1.5 border-b border-slate-50 dark:border-slate-800">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 flex items-center justify-center rounded-full bg-[#08214d] text-white">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          </svg>
+                        </div>
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Total enviado para cobrança</span>
+                      </div>
+                      <span className="text-xs font-black text-slate-900 dark:text-white">
+                        R$ {kpis ? kpis.totalSent.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '--'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between py-1.5 border-b border-slate-50 dark:border-slate-800">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 flex items-center justify-center rounded-full bg-emerald-600 text-white">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Total recuperado estimado</span>
+                      </div>
+                      <span className="text-xs font-black text-slate-900 dark:text-white">
+                        R$ {kpis ? kpis.totalRecovered.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '--'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 rounded-2xl border border-dashed border-rose-300 bg-rose-50/20 p-4 text-center dark:border-rose-900/40 dark:bg-rose-950/10">
+                  <h4 className="text-[10px] font-bold text-blue-900 dark:text-blue-300 uppercase tracking-wide">
+                    IMPACTO DA INADIMPLÊNCIA
+                  </h4>
+                  <div className="text-2xl font-black text-rose-600 dark:text-rose-400 my-1">
+                    {kpis ? `${kpis.delinquencyRate.toFixed(2).replace('.', ',')}%` : '--'}
+                  </div>
+                  <p className="text-[10px] text-blue-900/80 dark:text-blue-300/80 font-medium">
+                    da carteira está inadimplente
                   </p>
                 </div>
+              </div>
 
-                {/* Tab Selector */}
-                <div className="flex bg-slate-50 dark:bg-slate-950 p-1 rounded-xl border border-slate-100 dark:border-slate-800 self-start">
-                  <button
-                    onClick={() => setActiveTab('billing')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                      activeTab === 'billing'
-                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    💰 {t('dashboard.billingVsRecoveryLabel')}
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('delinquency')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                      activeTab === 'delinquency'
-                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    📉 {t('dashboard.delinquencyRateLabel')}
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('trend')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                      activeTab === 'trend'
-                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    ⏱️ {t('dashboard.trendIndicatorLabel')}
-                  </button>
+              <div className="lg:col-span-2 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-[#08214d] dark:text-blue-400 uppercase text-center mb-6">
+                    RESUMO DOS PRINCIPAIS KPIs
+                  </h3>
+                  
+                  <div className="overflow-hidden rounded-xl border border-slate-100 dark:border-slate-800">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="bg-[#08214d] text-white font-bold">
+                          <th className="px-4 py-3">KPI</th>
+                          <th className="px-4 py-3 text-center">RESULTADO</th>
+                          <th className="px-4 py-3 text-center">PÚBLICO APOIADO</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold text-slate-700 dark:text-slate-300">
+                        <tr className="hover:bg-slate-50/40 dark:hover:bg-slate-800/30">
+                          <td className="px-4 py-3 font-medium">Taxa de Inadimplência Financeira</td>
+                          <td className="px-4 py-3 text-center font-black text-rose-600 dark:text-rose-400">
+                            {kpis ? `${kpis.delinquencyRate.toFixed(2).replace('.', ',')}%` : '--'}
+                          </td>
+                          <td className="px-4 py-3 text-center text-blue-950 dark:text-blue-300 font-medium">Diretoria e Financeiro</td>
+                        </tr>
+                        <tr className="hover:bg-slate-50/40 dark:hover:bg-slate-800/30">
+                          <td className="px-4 py-3 font-medium">Taxa de Recuperação</td>
+                          <td className="px-4 py-3 text-center font-black text-emerald-600 dark:text-emerald-400">
+                            {kpis ? `${kpis.recoveryRate.toFixed(2).replace('.', ',')}%` : '--'}
+                          </td>
+                          <td className="px-4 py-3 text-center text-blue-950 dark:text-blue-300 font-medium">Diretoria, Financeiro e Operação</td>
+                        </tr>
+                        <tr className="hover:bg-slate-50/40 dark:hover:bg-slate-800/30">
+                          <td className="px-4 py-3 font-medium">Atraso Médio</td>
+                          <td className="px-4 py-3 text-center font-black text-blue-900 dark:text-blue-400">
+                            {kpis ? `${(kpis.averageDelay || 0).toFixed(1).replace('.', ',')} dias` : '--'}
+                          </td>
+                          <td className="px-4 py-3 text-center text-blue-950 dark:text-blue-300 font-medium">Operação de Cobrança</td>
+                        </tr>
+                        <tr className="hover:bg-slate-50/40 dark:hover:bg-slate-800/30">
+                          <td className="px-4 py-3 font-medium">Valor Total Inadimplente</td>
+                          <td className="px-4 py-3 text-center font-black text-rose-600 dark:text-rose-400">
+                            {kpis ? `R$ ${kpis.totalOverdue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '--'}
+                          </td>
+                          <td className="px-4 py-3 text-center text-blue-950 dark:text-blue-300 font-medium">Diretoria e Financeiro</td>
+                        </tr>
+                        <tr className="hover:bg-slate-50/40 dark:hover:bg-slate-800/30">
+                          <td className="px-4 py-3 font-medium">Valor Total Recuperado Estimado</td>
+                          <td className="px-4 py-3 text-center font-black text-emerald-600 dark:text-emerald-400">
+                            {kpis ? `R$ ${kpis.totalRecovered.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '--'}
+                          </td>
+                          <td className="px-4 py-3 text-center text-blue-950 dark:text-blue-300 font-medium">Diretoria e Financeiro</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <h3 className="text-sm font-bold text-[#08214d] dark:text-white uppercase text-center mb-1">
+                  ANÁLISE REGIONAL
+                </h3>
+                
+                <div className="flex flex-wrap justify-center gap-4 text-[11px] font-bold text-slate-500 dark:text-slate-300 mb-6">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 bg-[#08214d] rounded-sm" />
+                    <span>Valor (R$)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 bg-[#3b82f6] rounded-sm" />
+                    <span>Valor Inadimplente (R$)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 bg-[#93c5fd] rounded-sm" />
+                    <span>Atraso Médio (dias)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-4 h-1.5 bg-emerald-600 inline-block rounded-full" />
+                    <span>Score Médio de Risco</span>
+                  </div>
+                </div>
+
+                <div className="w-full">
+                  <svg viewBox="0 0 540 260" className="w-full h-auto overflow-visible">
+                    {[0, 1, 2, 3, 4, 5].map((idx) => {
+                      const y = 30 + idx * 36
+                      return (
+                        <line
+                          key={idx}
+                          x1="45"
+                          y1={y}
+                          x2="480"
+                          y2={y}
+                          stroke="rgba(148, 163, 184, 0.15)"
+                          strokeWidth="1"
+                        />
+                      )
+                    })}
+
+                    <text x="35" y="34" textAnchor="end" className="text-[11px] font-bold fill-slate-500 dark:fill-slate-300">10M</text>
+                    <text x="35" y="70" textAnchor="end" className="text-[11px] font-bold fill-slate-500 dark:fill-slate-300">8M</text>
+                    <text x="35" y="106" textAnchor="end" className="text-[11px] font-bold fill-slate-500 dark:fill-slate-300">6M</text>
+                    <text x="35" y="142" textAnchor="end" className="text-[11px] font-bold fill-slate-500 dark:fill-slate-300">4M</text>
+                    <text x="35" y="178" textAnchor="end" className="text-[11px] font-bold fill-slate-500 dark:fill-slate-300">2M</text>
+                    <text x="35" y="214" textAnchor="end" className="text-[11px] font-bold fill-slate-500 dark:fill-slate-300">0</text>
+                    <text x="10" y="120" textAnchor="middle" transform="rotate(-90 10 120)" className="text-[11px] font-black fill-slate-600 dark:fill-slate-200 uppercase">Valor (R$)</text>
+
+                    <text x="490" y="34" textAnchor="start" className="text-[11px] font-bold fill-slate-500 dark:fill-slate-300">700</text>
+                    <text x="490" y="58" textAnchor="start" className="text-[11px] font-bold fill-slate-500 dark:fill-slate-300">650</text>
+                    <text x="490" y="82" textAnchor="start" className="text-[11px] font-bold fill-slate-500 dark:fill-slate-300">600</text>
+                    <text x="490" y="106" textAnchor="start" className="text-[11px] font-bold fill-slate-500 dark:fill-slate-300">500</text>
+                    <text x="490" y="130" textAnchor="start" className="text-[11px] font-bold fill-slate-500 dark:fill-slate-300">400</text>
+                    <text x="490" y="154" textAnchor="start" className="text-[11px] font-bold fill-slate-500 dark:fill-slate-300">300</text>
+                    <text x="490" y="178" textAnchor="start" className="text-[11px] font-bold fill-slate-500 dark:fill-slate-300">250</text>
+                    <text x="490" y="202" textAnchor="start" className="text-[11px] font-bold fill-slate-500 dark:fill-slate-300">100</text>
+                    <text x="490" y="214" textAnchor="start" className="text-[11px] font-bold fill-slate-500 dark:fill-slate-300">0</text>
+                    <text x="528" y="120" textAnchor="middle" transform="rotate(90 528 120)" className="text-[11px] font-black fill-slate-600 dark:fill-slate-200 uppercase">Dias / Score</text>
+
+                    {[
+                      { region: 'Sudeste', val: 8420000, delay: 58.4, score: 612.3, x: 80 },
+                      { region: 'Nordeste', val: 4150000, delay: 55.7, score: 587.1, x: 165 },
+                      { region: 'Sul', val: 2730000, delay: 60.2, score: 599.4, x: 250 },
+                      { region: 'Centro-Oeste', val: 1980000, delay: 52.6, score: 578.6, x: 335 },
+                      { region: 'Norte', val: 1530000, delay: 50.1, score: 561.8, x: 420 }
+                    ].map((item, idx, arr) => {
+                      const yZero = 210
+                      const maxValScale = 10000000
+                      const maxScoreScale = 700
+                      
+                      const barValHeight = (item.val / maxValScale) * 180
+                      const barDelayHeight = (item.delay / maxScoreScale) * 180
+                      
+                      const valY = yZero - barValHeight
+                      const delayY = yZero - barDelayHeight
+                      
+                      const lineY = yZero - (item.score / maxScoreScale) * 180
+                      
+                      const nextItem = arr[idx + 1]
+                      const nextLineY = nextItem ? yZero - (nextItem.score / maxScoreScale) * 180 : 0
+                      const nextX = nextItem ? nextItem.x + 20 : 0
+
+                      return (
+                        <g key={item.region}>
+                          <rect x={item.x - 12} y={valY} width="18" height={barValHeight} fill="#08214d" rx="2" />
+                          <text x={item.x - 3} y={valY - 6} textAnchor="middle" className="text-[10px] font-black fill-[#08214d] dark:fill-blue-400">
+                            R$ {(item.val / 1000000).toFixed(2).replace('.', ',')}M
+                          </text>
+
+                          <rect x={item.x + 8} y={delayY} width="18" height={barDelayHeight} fill="#3b82f6" rx="2" />
+                          <text x={item.x + 17} y={delayY - 6} textAnchor="middle" className="text-[10px] font-extrabold fill-slate-700 dark:fill-blue-300">
+                            {item.delay.toFixed(1).replace('.', ',')}
+                          </text>
+
+                          {nextItem && (
+                            <line x1={item.x + 3} y1={lineY} x2={nextX + 3} y2={nextLineY} stroke="#16a34a" strokeWidth="2" />
+                          )}
+
+                          <circle cx={item.x + 3} cy={lineY} r="4" fill="#16a34a" stroke="#ffffff" strokeWidth="1" />
+                          <text x={item.x + 3} y={lineY - 8} textAnchor="middle" className="text-[10px] font-black fill-[#047857] dark:fill-emerald-400">
+                            {item.score.toFixed(1).replace('.', ',')}
+                          </text>
+
+                          <text x={item.x + 3} y="235" textAnchor="middle" className="text-[11px] font-black fill-slate-800 dark:fill-slate-200">
+                            {item.region}
+                          </text>
+                        </g>
+                      )
+                    })}
+                  </svg>
                 </div>
               </div>
 
-              {/* Late Payments Increase/Decrease Indicator */}
-              {temporalTrend.length >= 2 && (
-                <div className="mb-6 rounded-xl border border-slate-100 bg-slate-50/50 p-3 sm:p-4 dark:border-slate-800 dark:bg-slate-950/20 flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">⚡</span>
-                    <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('dashboard.trendIndicatorLabel')}</p>
-                      <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        {(() => {
-                          const last = temporalTrend[temporalTrend.length - 1]
-                          const prev = temporalTrend[temporalTrend.length - 2]
-                          const diff = last.latePaymentsCount - prev.latePaymentsCount
-                          const percent = prev.latePaymentsCount > 0 ? Math.round((Math.abs(diff) / prev.latePaymentsCount) * 100) : 0
-                          
-                          if (diff > 0) {
-                            return t('dashboard.trendIncrease', { percent })
-                          } else if (diff < 0) {
-                            return t('dashboard.trendDecrease', { percent })
-                          } else {
-                            return t('dashboard.trendStable')
-                          }
-                        })()}
-                      </p>
-                    </div>
-                  </div>
+              <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-[#08214d] dark:text-white uppercase text-center mb-6">
+                    DESEMPENHO DAS ASSESSORIAS
+                  </h3>
                   
-                  {/* Legends */}
-                  <div className="flex flex-wrap items-center gap-4 text-xs font-semibold">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-3 h-3 rounded-full bg-indigo-500/20 border border-indigo-500" />
-                      <span className="text-slate-500">{t('dashboard.expectedBillingLine')}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-3 h-3 rounded-full bg-emerald-500" />
-                      <span className="text-slate-500">{t('dashboard.recoveredBillingLine')}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-3 h-1 bg-amber-500 inline-block" />
-                      <span className="text-slate-500">{t('dashboard.delinquencyRateLine')}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Chart Render Area */}
-              <div className="p-4 rounded-2xl border border-slate-50 dark:border-slate-800 bg-slate-50/20 dark:bg-slate-950/10">
-                <svg viewBox="0 0 600 280" className="w-full h-auto overflow-visible">
-                  {/* Grid Lines */}
-                  {[0, 1, 2, 3, 4].map(grid => {
-                    const yVal = 40 + grid * 45
-                    return (
-                      <line
-                        key={grid}
-                        x1="50"
-                        y1={yVal}
-                        x2="550"
-                        y2={yVal}
-                        stroke="rgba(148, 163, 184, 0.1)"
-                        strokeWidth="1"
-                        strokeDasharray="4 4"
-                      />
-                    )
-                  })}
-
-                  {/* Monthly elements rendering */}
-                  {temporalTrend.map((m, idx) => {
-                    const xCenter = 95 + idx * 82
-                    
-                    const maxVal = Math.max(...temporalTrend.map(x => x.expectedBilling), 70000)
-                    const expectedH = (m.expectedBilling / maxVal) * 180
-                    const recoveredH = (m.recoveredAmount / maxVal) * 180
-                    const lateCountH = (m.latePaymentsCount / Math.max(...temporalTrend.map(x => x.latePaymentsCount), 10)) * 180
-
-                    const expectedY = 220 - expectedH
-                    const recoveredY = 220 - recoveredH
-                    const lateCountY = 220 - lateCountH
-
-                    const isHovered = hoveredMonth === m.month
-
-                    return (
-                      <g
-                        key={m.month}
-                        className="group cursor-pointer"
-                        onMouseEnter={() => setHoveredMonth(m.month)}
-                        onMouseLeave={() => setHoveredMonth(null)}
-                      >
-                        {/* Tab 1: expected vs recovery bars */}
-                        {activeTab === 'billing' && (
-                          <>
-                            {/* Expected Bar */}
-                            <rect
-                              x={xCenter - 22}
-                              y={expectedY}
-                              width="18"
-                              height={expectedH}
-                              rx="4"
-                              className={`transition duration-200 ${
-                                isHovered ? 'fill-indigo-500' : 'fill-indigo-500/20 stroke stroke-indigo-500 stroke-2'
-                              }`}
-                            />
-                            {/* Recovered Bar */}
-                            <rect
-                              x={xCenter + 2}
-                              y={recoveredY}
-                              width="18"
-                              height={recoveredH}
-                              rx="4"
-                              className={`fill-emerald-500 transition duration-200 ${
-                                isHovered ? 'fill-emerald-600 scale-y-105 origin-bottom' : ''
-                              }`}
-                            />
-                            {/* Hover tooltip for faturamento */}
-                            {isHovered && (
-                              <g className="pointer-events-none drop-shadow">
-                                <rect
-                                  x={xCenter - 65}
-                                  y={Math.min(expectedY, recoveredY) - 50}
-                                  width="130"
-                                  height="42"
-                                  rx="8"
-                                  className="fill-slate-900 dark:fill-white"
-                                />
-                                <text
-                                  x={xCenter}
-                                  y={Math.min(expectedY, recoveredY) - 34}
-                                  textAnchor="middle"
-                                  className="text-[9px] font-bold fill-white dark:fill-slate-900"
-                                >
-                                  Prev: R$ {m.expectedBilling.toLocaleString('pt-BR')}
-                                </text>
-                                <text
-                                  x={xCenter}
-                                  y={Math.min(expectedY, recoveredY) - 20}
-                                  textAnchor="middle"
-                                  className="text-[9px] font-black fill-emerald-400 dark:fill-emerald-600"
-                                >
-                                  Rec: R$ {m.recoveredAmount.toLocaleString('pt-BR')}
-                                </text>
-                              </g>
-                            )}
-                          </>
-                        )}
-
-                        {/* Tab 3: Late installments bar */}
-                        {activeTab === 'trend' && (
-                          <>
-                            <rect
-                              x={xCenter - 15}
-                              y={lateCountY}
-                              width="30"
-                              height={lateCountH}
-                              rx="6"
-                              className={`transition duration-200 ${
-                                isHovered ? 'fill-rose-500' : 'fill-rose-500/25 stroke stroke-rose-500 stroke-2'
-                              }`}
-                            />
-                            {isHovered && (
-                              <g className="pointer-events-none drop-shadow">
-                                <rect
-                                  x={xCenter - 55}
-                                  y={lateCountY - 34}
-                                  width="110"
-                                  height="24"
-                                  rx="6"
-                                  className="fill-slate-900 dark:fill-white"
-                                />
-                                <text
-                                  x={xCenter}
-                                  y={lateCountY - 18}
-                                  textAnchor="middle"
-                                  className="text-[9px] font-black fill-white dark:fill-slate-900"
-                                >
-                                  {m.latePaymentsCount} parcelas atrasadas
-                                </text>
-                              </g>
-                            )}
-                          </>
-                        )}
-
-                        {/* Month Label */}
-                        <text
-                          x={xCenter}
-                          y="242"
-                          textAnchor="middle"
-                          className={`text-[11px] font-bold transition ${
-                            isHovered ? 'fill-indigo-600 dark:fill-indigo-400 scale-110' : 'fill-slate-400 dark:fill-slate-500'
-                          }`}
-                        >
-                          {m.month}
-                        </text>
-                      </g>
-                    )
-                  })}
-
-                  {/* Tab 2: Delinquency Rate smooth line chart overlay */}
-                  {activeTab === 'delinquency' && (() => {
-                    const points = temporalTrend.map((m, idx) => {
-                      const x = 95 + idx * 82
-                      const y = 220 - (m.delinquencyRate / 100) * 180
-                      return { x, y }
-                    })
-                    const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
-                    
-                    return (
-                      <>
-                        <path
-                          d={pathD}
-                          fill="none"
-                          stroke="#f59e0b"
-                          strokeWidth="6"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="opacity-20 blur-[2px]"
-                        />
-                        <path
-                          d={pathD}
-                          fill="none"
-                          stroke="#f59e0b"
-                          strokeWidth="3.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        
-                        {points.map((p, i) => {
-                          const isHovered = hoveredMonth === temporalTrend[i].month
-                          return (
-                            <g
-                              key={i}
-                              className="group cursor-pointer"
-                              onMouseEnter={() => setHoveredMonth(temporalTrend[i].month)}
-                              onMouseLeave={() => setHoveredMonth(null)}
-                            >
-                              <circle
-                                cx={p.x}
-                                cy={p.y}
-                                r={isHovered ? "8" : "5"}
-                                fill="#ffffff"
-                                stroke="#f59e0b"
-                                strokeWidth="3"
-                                className="drop-shadow-sm transition-all duration-150"
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="border-r border-slate-50 dark:border-slate-800 pr-2">
+                      <h4 className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider text-center mb-3">
+                        TAXA DE RECUPERAÇÃO FINANCEIRA (%)
+                      </h4>
+                      
+                      <div className="space-y-4">
+                        {[
+                          { name: 'ASSESSORIA ALFA', rate: 48.72 },
+                          { name: 'ASSESSORIA BETA', rate: 41.36 },
+                          { name: 'ASSESSORIA GAMA', rate: 33.95 },
+                          { name: 'ASSESSORIA DELTA', rate: 27.18 },
+                          { name: 'ASSESSORIA EPSILON', rate: 18.64 }
+                        ].map((item) => (
+                          <div key={item.name} className="space-y-1">
+                            <div className="flex justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                              <span>{item.name}</span>
+                              <span className="text-[#08214d] dark:text-blue-400 font-extrabold">{item.rate.toFixed(2).replace('.', ',')}%</span>
+                            </div>
+                            <div className="w-full h-4 bg-slate-100 dark:bg-slate-800 rounded-sm overflow-hidden relative">
+                              <div
+                                className="h-full bg-[#08214d] rounded-sm transition-all duration-500"
+                                style={{ width: `${(item.rate / 60) * 100}%` }}
                               />
-                              
-                              {isHovered && (
-                                <g className="pointer-events-none drop-shadow">
-                                  <rect
-                                    x={p.x - 55}
-                                    y={p.y - 38}
-                                    width="110"
-                                    height="28"
-                                    rx="6"
-                                    className="fill-slate-900 dark:fill-white"
-                                  />
-                                  <text
-                                    x={p.x}
-                                    y={p.y - 20}
-                                    textAnchor="middle"
-                                    className="text-[9px] font-black fill-white dark:fill-slate-900"
-                                  >
-                                    Taxa Inad: {temporalTrend[i].delinquencyRate}%
-                                  </text>
-                                </g>
-                              )}
-                            </g>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="flex justify-between text-[10px] font-bold text-slate-400 dark:text-slate-400 mt-2 px-1">
+                        <span>0%</span>
+                        <span>20%</span>
+                        <span>40%</span>
+                        <span>60%</span>
+                      </div>
+                    </div>
+
+                    <div className="pl-2">
+                      <h4 className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider text-center mb-2">
+                        VALOR ENVIADO X VALOR RECUPERADO (R$)
+                      </h4>
+                      
+                      <div className="flex justify-center gap-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2">
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-[#08214d] rounded-sm" />
+                          <span>Total Enviado</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-emerald-600 rounded-sm" />
+                          <span>Total Recuperado</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3.5">
+                        {[
+                          { name: 'ASSESSORIA ALFA', sent: 4.89, rec: 2.38 },
+                          { name: 'ASSESSORIA BETA', sent: 4.13, rec: 1.71 },
+                          { name: 'ASSESSORIA GAMA', sent: 3.28, rec: 1.12 },
+                          { name: 'ASSESSORIA DELTA', sent: 2.26, rec: 0.61 },
+                          { name: 'ASSESSORIA EPSILON', sent: 1.33, rec: 0.25 }
+                        ].map((item) => {
+                          const scale = 6.0
+                          const sentWidth = (item.sent / scale) * 100
+                          const recWidth = (item.rec / scale) * 100
+
+                          return (
+                            <div key={item.name} className="space-y-1">
+                              <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{item.name}</div>
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <div className="flex-1 h-2.5 bg-slate-50 dark:bg-slate-800 rounded-sm overflow-hidden">
+                                    <div className="h-full bg-[#08214d]" style={{ width: `${sentWidth}%` }} />
+                                  </div>
+                                  <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 w-10 text-right">R$ {item.sent.toFixed(2).replace('.', ',')}M</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <div className="flex-1 h-2.5 bg-slate-50 dark:bg-slate-800 rounded-sm overflow-hidden">
+                                    <div className="h-full bg-emerald-600" style={{ width: `${recWidth}%` }} />
+                                  </div>
+                                  <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-450 w-10 text-right">R$ {item.rec.toFixed(2).replace('.', ',')}M</span>
+                                </div>
+                              </div>
+                            </div>
                           )
                         })}
-                      </>
-                    )
-                  })()}
-                </svg>
+                      </div>
+
+                      <div className="flex justify-between text-[10px] font-bold text-slate-400 dark:text-slate-400 mt-2.5 px-1">
+                        <span>0</span>
+                        <span>2M</span>
+                        <span>4M</span>
+                        <span>6M</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-              {/* Critical Alerts Feed Sidebar (Right Column) */}
-              <div className="lg:col-span-1 space-y-4 sm:space-y-6">
-                <div className="rounded-2xl sm:rounded-3xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                  <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white mb-3 sm:mb-4 flex items-center justify-between">
-                    <span>{t('dashboard.alertsTitle')}</span>
-                    {alerts.length > 0 && (
-                      <span className="rounded-full bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/50 px-2 py-0.5 text-[9px] sm:text-[10px] font-black text-rose-600 dark:text-rose-400">
-                        {t('dashboard.alertsActiveBadge', { count: alerts.length })}
-                      </span>
-                    )}
-                  </h3>
-
-                  {alerts.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
-                      <span className="text-2xl sm:text-3xl mb-2">🎉</span>
-                      <h4 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">{t('dashboard.alertsCleanTitle')}</h4>
-                      <p className="text-[11px] sm:text-xs text-slate-500 mt-1 max-w-[200px]">{t('dashboard.alertsCleanDesc')}</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 sm:space-y-4">
-                      {alerts.map((alert) => (
-                        <Link
-                          key={alert.id}
-                          href={`/clients/${alert.client_id}`}
-                          className="block rounded-xl sm:rounded-2xl border border-slate-100 dark:border-slate-800 p-3 sm:p-4 space-y-1.5 sm:space-y-2 bg-slate-50/50 dark:bg-slate-950/20 hover:border-indigo-200 dark:hover:border-indigo-800 hover:shadow-sm transition"
+            <div className="mt-10 pt-8 border-t border-slate-200 dark:border-slate-800">
+              <div className="mb-4">
+                <h3 className="text-xs font-black uppercase tracking-widest text-[#08214d] dark:text-blue-400 flex items-center gap-2">
+                  <span>🚨</span> CENTRAL DE ALERTAS DE INADIMPLÊNCIA CRÍTICA
+                </h3>
+              {alerts.length === 0 ? (
+                <div className="rounded-2xl border border-slate-100 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900">
+                  <span className="text-2xl">🎉</span>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm mt-2">{t('dashboard.alertsCleanTitle')}</h4>
+                  <p className="text-[11px] sm:text-xs text-slate-500 mt-1">{t('dashboard.alertsCleanDesc')}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {alerts.map((alert) => (
+                    <Link
+                      key={alert.id}
+                      href={`/clients/${alert.client_id}`}
+                      className="block rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 hover:border-indigo-300 dark:hover:border-indigo-750 transition hover:shadow-md cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-[11px] sm:text-xs text-slate-900 dark:text-white truncate max-w-[120px]">
+                          {alert.clientName}
+                        </span>
+                        <span className={`text-[8px] sm:text-[9px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-full ${
+                          alert.severity === 'critical'
+                            ? 'bg-rose-50 text-rose-600 border border-rose-100 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30'
+                            : 'bg-amber-50 text-amber-600 border border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30'
+                        }`}>
+                          {alert.severity}
+                        </span>
+                      </div>
+                      <p className="text-[10px] sm:text-xs text-slate-650 dark:text-slate-400 leading-relaxed font-semibold">
+                        {alert.message}
+                      </p>
+                      <div className="flex items-center justify-between border-t border-slate-50 dark:border-slate-800 pt-2 mt-2">
+                        <span className="text-[8px] sm:text-[9px] text-slate-400 font-semibold">
+                          {new Date(alert.created_at).toLocaleDateString('pt-BR')}
+                        </span>
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleResolveAlert(alert.id); }}
+                          className="text-[9px] sm:text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-[11px] sm:text-xs text-slate-900 dark:text-white truncate max-w-[110px] sm:max-w-[130px]">
-                              {t('dashboard.alertsClient', { name: alert.clientName })}
-                            </span>
-                            <span className={`text-[8px] sm:text-[9px] uppercase tracking-wider font-extrabold px-1.5 sm:px-2 py-0.5 rounded-full ${
-                              alert.severity === 'critical'
-                                ? 'bg-rose-50 text-rose-600 border border-rose-100 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30'
-                                : 'bg-amber-50 text-amber-600 border border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30'
-                            }`}>
-                              {alert.severity}
-                            </span>
-                          </div>
-
-                          <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                            {alert.message}
-                          </p>
-
-                          <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-2 sm:pt-2.5 mt-1">
-                            <span className="text-[8px] sm:text-[9px] text-slate-400 font-semibold">
-                              {t('dashboard.alertsTime', { date: new Date(alert.created_at).toLocaleDateString('pt-BR') })}
-                            </span>
-                            <button
-                              onClick={(e) => { e.preventDefault(); handleResolveAlert(alert.id); }}
-                              className="text-[9px] sm:text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 hover:underline transition min-h-[44px] min-w-[44px] flex items-center justify-center"
-                            >
-                              {t('dashboard.alertsArchive')}
-                            </button>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Advanced Portfolio Analytics Section */}
-            <div className="mt-10 pt-10 border-t border-slate-200 dark:border-slate-800 space-y-6 sm:space-y-8">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>📊</span> Relatórios Avançados de Performance e Cobrança
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Métricas analíticas avançadas e ranqueamentos consolidados da carteira.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
-                
-                {/* Chart 1: Valor Inadimplente por Região */}
-                <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 transition hover:shadow-md">
-                  <div className="mb-4">
-                    <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Valor Inadimplente por Região</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Total inadimplente exposto por região geográfica.</p>
-                  </div>
-                  <div className="relative pt-2">
-                    {(() => {
-                      const maxVal = Math.max(...regionalStats.map(r => r.volumeAtRisk), 1000)
-                      return (
-                        <svg viewBox="0 0 400 240" className="w-full h-auto overflow-visible">
-                          {/* Y-Axis Grid Lines & Labels */}
-                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
-                            const yVal = 180 - ratio * 140
-                            const amount = Math.round(ratio * maxVal)
-                            return (
-                              <g key={i} className="opacity-40 dark:opacity-20">
-                                <line x1="55" y1={yVal} x2="380" y2={yVal} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="1" strokeDasharray="3 3" />
-                                <text x="48" y={yVal + 4} textAnchor="end" className="text-[9px] font-bold fill-slate-400 dark:fill-slate-500">
-                                  R$ {amount >= 1000 ? `${(amount / 1000).toFixed(0)}k` : amount}
-                                </text>
-                              </g>
-                            )
-                          })}
-                          {/* Bars */}
-                          {regionalStats.map((item, idx) => {
-                            const barWidth = 28
-                            const colWidth = 325 / (regionalStats.length || 1)
-                            const x = 65 + idx * colWidth + (colWidth - barWidth) / 2
-                            const barHeight = (item.volumeAtRisk / maxVal) * 140
-                            const y = 180 - barHeight
-                            const isHovered = hoveredChartBar === `c1-${idx}`
-
-                            return (
-                              <g
-                                key={item.region}
-                                className="cursor-pointer"
-                                onMouseEnter={() => setHoveredChartBar(`c1-${idx}`)}
-                                onMouseLeave={() => setHoveredChartBar(null)}
-                              >
-                                <rect
-                                  x={x}
-                                  y={y}
-                                  width={barWidth}
-                                  height={barHeight}
-                                  rx="4"
-                                  className="transition-all duration-300"
-                                  fill="url(#c1Grad)"
-                                  opacity={isHovered ? 1 : 0.8}
-                                />
-                                <text x={x + barWidth / 2} y="196" textAnchor="middle" className="text-[10px] font-bold fill-slate-500 dark:fill-slate-400">
-                                  {item.region}
-                                </text>
-                                {/* Tooltip */}
-                                {isHovered && (
-                                  <g className="pointer-events-none drop-shadow-md">
-                                    <rect x={x + barWidth / 2 - 60} y={y - 32} width="120" height="24" rx="4" className="fill-slate-900 dark:fill-white" />
-                                    <text x={x + barWidth / 2} y={y - 17} textAnchor="middle" className="text-[9px] font-bold fill-white dark:fill-slate-900">
-                                      R$ {item.volumeAtRisk.toLocaleString('pt-BR')}
-                                    </text>
-                                  </g>
-                                )}
-                              </g>
-                            )
-                          })}
-                          {/* Gradient */}
-                          <defs>
-                            <linearGradient id="c1Grad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#f59e0b" />
-                              <stop offset="100%" stopColor="#ef4444" />
-                            </linearGradient>
-                          </defs>
-                        </svg>
-                      )
-                    })()}
-                  </div>
-                </div>
-
-                {/* Chart 2: Tendência Temporal da Inadimplência */}
-                <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 transition hover:shadow-md">
-                  <div className="mb-4">
-                    <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Tendência Temporal</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Evolução mensal do volume financeiro inadimplente.</p>
-                  </div>
-                  <div className="relative pt-2">
-                    {(() => {
-                      const maxVal = Math.max(...temporalTrend.map(t => t.delinquencyVolume), 1000)
-                      const points = temporalTrend.map((m, idx) => {
-                        const colWidth = 320 / (temporalTrend.length - 1 || 1)
-                        const x = 65 + idx * colWidth
-                        const y = 180 - (m.delinquencyVolume / maxVal) * 140
-                        return { x, y, month: m.month, val: m.delinquencyVolume }
-                      })
-                      const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
-                      const areaD = points.length > 0
-                        ? `${pathD} L ${points[points.length - 1].x} 180 L ${points[0].x} 180 Z`
-                        : ''
-
-                      return (
-                        <svg viewBox="0 0 400 240" className="w-full h-auto overflow-visible">
-                          {/* Y-Axis Grid Lines & Labels */}
-                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
-                            const yVal = 180 - ratio * 140
-                            const amount = Math.round(ratio * maxVal)
-                            return (
-                              <g key={i} className="opacity-40 dark:opacity-20">
-                                <line x1="55" y1={yVal} x2="380" y2={yVal} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="1" strokeDasharray="3 3" />
-                                <text x="48" y={yVal + 4} textAnchor="end" className="text-[9px] font-bold fill-slate-400 dark:fill-slate-500">
-                                  R$ {amount >= 1000 ? `${(amount / 1000).toFixed(0)}k` : amount}
-                                </text>
-                              </g>
-                            )
-                          })}
-                          {/* Area fill */}
-                          {areaD && <path d={areaD} fill="url(#c2AreaGrad)" className="opacity-30 dark:opacity-25" />}
-                          {/* Line path */}
-                          {pathD && <path d={pathD} fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
-                          {/* Markers */}
-                          {points.map((p, idx) => {
-                            const isHovered = hoveredChartBar === `c2-${idx}`
-                            return (
-                              <g
-                                key={p.month}
-                                className="cursor-pointer"
-                                onMouseEnter={() => setHoveredChartBar(`c2-${idx}`)}
-                                onMouseLeave={() => setHoveredChartBar(null)}
-                              >
-                                <circle
-                                  cx={p.x}
-                                  cy={p.y}
-                                  r={isHovered ? 7 : 4}
-                                  className="fill-white stroke-indigo-600 stroke-[3px] transition-all duration-200"
-                                />
-                                <text x={p.x} y="196" textAnchor="middle" className="text-[10px] font-bold fill-slate-500 dark:fill-slate-400">
-                                  {p.month}
-                                </text>
-                                {isHovered && (
-                                  <g className="pointer-events-none drop-shadow-md">
-                                    <rect x={p.x - 60} y={p.y - 32} width="120" height="24" rx="4" className="fill-slate-900 dark:fill-white" />
-                                    <text x={p.x} y={p.y - 17} textAnchor="middle" className="text-[9px] font-bold fill-white dark:fill-slate-900">
-                                      R$ {p.val.toLocaleString('pt-BR')}
-                                    </text>
-                                  </g>
-                                )}
-                              </g>
-                            )
-                          })}
-                          <defs>
-                            <linearGradient id="c2AreaGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#6366f1" />
-                              <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
-                            </linearGradient>
-                          </defs>
-                        </svg>
-                      )
-                    })()}
-                  </div>
-                </div>
-
-                {/* Chart 3: Atraso Médio por Região */}
-                <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 transition hover:shadow-md">
-                  <div className="mb-4">
-                    <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Atraso Médio por Região</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Média de dias em atraso inicial dos contratos por região.</p>
-                  </div>
-                  <div className="relative pt-2">
-                    {(() => {
-                      const sortedRegions = [...regionalStats].sort((a, b) => b.averageDelay - a.averageDelay)
-                      const maxVal = Math.max(...sortedRegions.map(r => r.averageDelay), 30)
-                      return (
-                        <svg viewBox="0 0 400 240" className="w-full h-auto overflow-visible">
-                          {/* Y-Axis Grid Lines & Labels */}
-                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
-                            const yVal = 180 - ratio * 140
-                            const val = Math.round(ratio * maxVal)
-                            return (
-                              <g key={i} className="opacity-40 dark:opacity-20">
-                                <line x1="55" y1={yVal} x2="380" y2={yVal} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="1" strokeDasharray="3 3" />
-                                <text x="48" y={yVal + 4} textAnchor="end" className="text-[9px] font-bold fill-slate-400 dark:fill-slate-500">
-                                  {val} d
-                                </text>
-                              </g>
-                            )
-                          })}
-                          {/* Bars */}
-                          {sortedRegions.map((item, idx) => {
-                            const barWidth = 28
-                            const colWidth = 325 / (sortedRegions.length || 1)
-                            const x = 65 + idx * colWidth + (colWidth - barWidth) / 2
-                            const barHeight = (item.averageDelay / maxVal) * 140
-                            const y = 180 - barHeight
-                            const isHovered = hoveredChartBar === `c3-${idx}`
-
-                            return (
-                              <g
-                                key={item.region}
-                                className="cursor-pointer"
-                                onMouseEnter={() => setHoveredChartBar(`c3-${idx}`)}
-                                onMouseLeave={() => setHoveredChartBar(null)}
-                              >
-                                <rect
-                                  x={x}
-                                  y={y}
-                                  width={barWidth}
-                                  height={barHeight}
-                                  rx="4"
-                                  className="transition-all duration-300"
-                                  fill="url(#c3Grad)"
-                                  opacity={isHovered ? 1 : 0.8}
-                                />
-                                <text x={x + barWidth / 2} y="196" textAnchor="middle" className="text-[10px] font-bold fill-slate-500 dark:fill-slate-400">
-                                  {item.region}
-                                </text>
-                                {isHovered && (
-                                  <g className="pointer-events-none drop-shadow-md">
-                                    <rect x={x + barWidth / 2 - 50} y={y - 32} width="100" height="24" rx="4" className="fill-slate-900 dark:fill-white" />
-                                    <text x={x + barWidth / 2} y={y - 17} textAnchor="middle" className="text-[9px] font-bold fill-white dark:fill-slate-900">
-                                      {item.averageDelay} dias
-                                    </text>
-                                  </g>
-                                )}
-                              </g>
-                            )
-                          })}
-                          <defs>
-                            <linearGradient id="c3Grad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#8b5cf6" />
-                              <stop offset="100%" stopColor="#d946ef" />
-                            </linearGradient>
-                          </defs>
-                        </svg>
-                      )
-                    })()}
-                  </div>
-                </div>
-
-                {/* Chart 4: Taxa de Recuperação Financeira por Assessoria */}
-                <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 transition hover:shadow-md">
-                  <div className="mb-4">
-                    <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Taxa de Recuperação por Assessoria</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Percentual de recuperação sobre o valor enviado por assessoria.</p>
-                  </div>
-                  <div className="relative pt-2">
-                    {(() => {
-                      const maxVal = 100
-                      const sortedStats = [...advisoryStats].sort((a, b) => b.recoveryRate - a.recoveryRate)
-                      return (
-                        <svg viewBox="0 0 400 240" className="w-full h-auto overflow-visible">
-                          {/* Y-Axis Grid Lines & Labels */}
-                          {[0, 25, 50, 75, 100].map((val, i) => {
-                            const yVal = 180 - (val / 100) * 140
-                            return (
-                              <g key={i} className="opacity-40 dark:opacity-20">
-                                <line x1="55" y1={yVal} x2="380" y2={yVal} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="1" strokeDasharray="3 3" />
-                                <text x="48" y={yVal + 4} textAnchor="end" className="text-[9px] font-bold fill-slate-400 dark:fill-slate-500">
-                                  {val}%
-                                </text>
-                              </g>
-                            )
-                          })}
-                          {/* Bars */}
-                          {sortedStats.map((item, idx) => {
-                            const barWidth = 24
-                            const colWidth = 325 / (sortedStats.length || 1)
-                            const x = 65 + idx * colWidth + (colWidth - barWidth) / 2
-                            const barHeight = (item.recoveryRate / maxVal) * 140
-                            const y = 180 - barHeight
-                            const isHovered = hoveredChartBar === `c4-${idx}`
-
-                            return (
-                              <g
-                                key={item.name}
-                                className="cursor-pointer"
-                                onMouseEnter={() => setHoveredChartBar(`c4-${idx}`)}
-                                onMouseLeave={() => setHoveredChartBar(null)}
-                              >
-                                <rect
-                                  x={x}
-                                  y={y}
-                                  width={barWidth}
-                                  height={barHeight}
-                                  rx="4"
-                                  className="transition-all duration-300"
-                                  fill="url(#c4Grad)"
-                                  opacity={isHovered ? 1 : 0.8}
-                                />
-                                <text x={x + barWidth / 2} y="196" textAnchor="middle" className="text-[8px] font-bold fill-slate-500 dark:fill-slate-400">
-                                  {item.name.split(' ')[0]}
-                                </text>
-                                {isHovered && (
-                                  <g className="pointer-events-none drop-shadow-md">
-                                    <rect x={x + barWidth / 2 - 50} y={y - 32} width="100" height="24" rx="4" className="fill-slate-900 dark:fill-white" />
-                                    <text x={x + barWidth / 2} y={y - 17} textAnchor="middle" className="text-[9px] font-bold fill-white dark:fill-slate-900">
-                                      {item.recoveryRate.toFixed(2)}%
-                                    </text>
-                                  </g>
-                                )}
-                              </g>
-                            )
-                          })}
-                          <defs>
-                            <linearGradient id="c4Grad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#10b981" />
-                              <stop offset="100%" stopColor="#059669" />
-                            </linearGradient>
-                          </defs>
-                        </svg>
-                      )
-                    })()}
-                  </div>
-                </div>
-
-                {/* Chart 5: Valor Enviado x Valor Recuperado por Assessoria */}
-                <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 transition hover:shadow-md">
-                  <div className="mb-4">
-                    <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Valor Enviado vs Recuperado</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Comparativo entre os valores entregues para cobrança e recuperados.</p>
-                  </div>
-                  <div className="relative pt-2">
-                    {(() => {
-                      const maxVal = Math.max(...advisoryStats.map(a => Math.max(a.totalSent, a.recoveredAmount)), 1000)
-                      return (
-                        <svg viewBox="0 0 400 240" className="w-full h-auto overflow-visible">
-                          {/* Y-Axis Grid Lines & Labels */}
-                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
-                            const yVal = 180 - ratio * 140
-                            const amount = Math.round(ratio * maxVal)
-                            return (
-                              <g key={i} className="opacity-40 dark:opacity-20">
-                                <line x1="55" y1={yVal} x2="380" y2={yVal} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="1" strokeDasharray="3 3" />
-                                <text x="48" y={yVal + 4} textAnchor="end" className="text-[9px] font-bold fill-slate-400 dark:fill-slate-500">
-                                  R$ {amount >= 1000000 ? `${(amount / 1000000).toFixed(1)}M` : amount >= 1000 ? `${(amount / 1000).toFixed(0)}k` : amount}
-                                </text>
-                              </g>
-                            )
-                          })}
-                          {/* Grouped Bars */}
-                          {advisoryStats.map((item, idx) => {
-                            const colWidth = 325 / (advisoryStats.length || 1)
-                            const barWidth = 12
-                            const xCent = 65 + idx * colWidth + colWidth / 2
-                            
-                            const sentH = (item.totalSent / maxVal) * 140
-                            const sentY = 180 - sentH
-                            const recH = (item.recoveredAmount / maxVal) * 140
-                            const recY = 180 - recH
-                            
-                            const isHovered = hoveredChartBar === `c5-${idx}`
-
-                            return (
-                              <g
-                                key={item.name}
-                                className="cursor-pointer"
-                                onMouseEnter={() => setHoveredChartBar(`c5-${idx}`)}
-                                onMouseLeave={() => setHoveredChartBar(null)}
-                              >
-                                {/* Sent Bar (Blueish) */}
-                                <rect
-                                  x={xCent - barWidth - 1}
-                                  y={sentY}
-                                  width={barWidth}
-                                  height={sentH}
-                                  rx="2"
-                                  className="transition-all duration-300"
-                                  fill="#3b82f6"
-                                  opacity={isHovered ? 1 : 0.8}
-                                />
-                                {/* Recovered Bar (Greenish) */}
-                                <rect
-                                  x={xCent + 1}
-                                  y={recY}
-                                  width={barWidth}
-                                  height={recH}
-                                  rx="2"
-                                  className="transition-all duration-300"
-                                  fill="#10b981"
-                                  opacity={isHovered ? 1 : 0.8}
-                                />
-                                <text x={xCent} y="196" textAnchor="middle" className="text-[8px] font-bold fill-slate-500 dark:fill-slate-400">
-                                  {item.name.split(' ')[0]}
-                                </text>
-                                {isHovered && (
-                                  <g className="pointer-events-none drop-shadow-md">
-                                    <rect x={xCent - 75} y={Math.min(sentY, recY) - 46} width="150" height="38" rx="6" className="fill-slate-900 dark:fill-white" />
-                                    <text x={xCent} y={Math.min(sentY, recY) - 32} textAnchor="middle" className="text-[9px] font-bold fill-white dark:fill-slate-900">
-                                      Env: R$ {item.totalSent.toLocaleString('pt-BR')}
-                                    </text>
-                                    <text x={xCent} y={Math.min(sentY, recY) - 18} textAnchor="middle" className="text-[9px] font-black fill-emerald-400 dark:fill-emerald-600">
-                                      Rec: R$ {item.recoveredAmount.toLocaleString('pt-BR')}
-                                    </text>
-                                  </g>
-                                )}
-                              </g>
-                            )
-                          })}
-                        </svg>
-                      )
-                    })()}
-                    {/* Chart Legend */}
-                    <div className="flex justify-center gap-4 mt-2 text-[10px] font-bold">
-                      <div className="flex items-center gap-1">
-                        <span className="w-2.5 h-2.5 bg-blue-500 rounded" />
-                        <span className="text-slate-500">Valor Enviado</span>
+                          {t('dashboard.alertsArchive')}
+                        </button>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span className="w-2.5 h-2.5 bg-emerald-500 rounded" />
-                        <span className="text-slate-500">Valor Recuperado</span>
-                      </div>
-                    </div>
-                  </div>
+                    </Link>
+                  ))}
                 </div>
-
-                {/* Chart 6: Ranking de Eficiência Ajustada pelo Risco */}
-                <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 transition hover:shadow-md">
-                  <div className="mb-4">
-                    <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Ranking de Eficiência Ajustada</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Eficiência ponderada pela dificuldade da carteira (atraso e score).</p>
-                  </div>
-                  <div className="relative pt-2">
-                    {(() => {
-                      const maxVal = Math.max(...advisoryRanking.map(a => a.adjustedEfficiency), 1)
-                      return (
-                        <svg viewBox="0 0 400 240" className="w-full h-auto overflow-visible">
-                          {/* Y-Axis Grid Lines & Labels */}
-                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
-                            const yVal = 180 - ratio * 140
-                            const val = (ratio * maxVal).toFixed(1)
-                            return (
-                              <g key={i} className="opacity-40 dark:opacity-20">
-                                <line x1="55" y1={yVal} x2="380" y2={yVal} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="1" strokeDasharray="3 3" />
-                                <text x="48" y={yVal + 4} textAnchor="end" className="text-[9px] font-bold fill-slate-400 dark:fill-slate-500">
-                                  {val}
-                                </text>
-                              </g>
-                            )
-                          })}
-                          {/* Bars */}
-                          {advisoryRanking.map((item, idx) => {
-                            const barWidth = 24
-                            const colWidth = 325 / (advisoryRanking.length || 1)
-                            const x = 65 + idx * colWidth + (colWidth - barWidth) / 2
-                            const barHeight = (item.adjustedEfficiency / maxVal) * 140
-                            const y = 180 - barHeight
-                            const isHovered = hoveredChartBar === `c6-${idx}`
-
-                            return (
-                              <g
-                                key={item.name}
-                                className="cursor-pointer"
-                                onMouseEnter={() => setHoveredChartBar(`c6-${idx}`)}
-                                onMouseLeave={() => setHoveredChartBar(null)}
-                              >
-                                <rect
-                                  x={x}
-                                  y={y}
-                                  width={barWidth}
-                                  height={barHeight}
-                                  rx="4"
-                                  className="transition-all duration-300"
-                                  fill="url(#c6Grad)"
-                                  opacity={isHovered ? 1 : 0.8}
-                                />
-                                <text x={x + barWidth / 2} y="196" textAnchor="middle" className="text-[8px] font-bold fill-slate-500 dark:fill-slate-400">
-                                  {item.name.split(' ')[0]}
-                                </text>
-                                {isHovered && (
-                                  <g className="pointer-events-none drop-shadow-md">
-                                    <rect x={x + barWidth / 2 - 50} y={y - 32} width="100" height="24" rx="4" className="fill-slate-900 dark:fill-white" />
-                                    <text x={x + barWidth / 2} y={y - 17} textAnchor="middle" className="text-[9px] font-bold fill-white dark:fill-slate-900">
-                                      Índice: {item.adjustedEfficiency.toFixed(2)}
-                                    </text>
-                                  </g>
-                                )}
-                              </g>
-                            )
-                          })}
-                          <defs>
-                            <linearGradient id="c6Grad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#3b82f6" />
-                              <stop offset="100%" stopColor="#8b5cf6" />
-                            </linearGradient>
-                          </defs>
-                        </svg>
-                      )
-                    })()}
-                  </div>
-                </div>
-
-              </div>
+              )}
             </div>
-
+            </div>
           </>
         ) : null}
       </main>

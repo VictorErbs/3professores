@@ -104,18 +104,7 @@ export default function Header() {
             </select>
           </div>
 
-          {/* Language Selector - compact on mobile */}
-          <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-1.5 sm:px-2.5 py-1 rounded-lg border border-slate-100 dark:border-slate-800">
-            <span className="hidden sm:inline text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('header.language')}:</span>
-            <select
-              value={i18n.language}
-              onChange={(e) => i18n.changeLanguage(e.target.value)}
-              className="bg-transparent text-[11px] sm:text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-200 border-none p-0 outline-none"
-            >
-              <option value="pt" className="bg-white dark:bg-slate-900">PT</option>
-              <option value="en" className="bg-white dark:bg-slate-900">EN</option>
-            </select>
-          </div>
+
 
           {/* Hamburger */}
           <button

@@ -18,8 +18,8 @@ const resources = {
         language: "Idioma"
       },
       dashboard: {
-        title: "Painel de Controle Executivo",
-        subtitle: "Análise preditiva de crédito, controle de arrecadação de consórcios e indicadores de cobrança.",
+        title: "DASHBOARD EXECUTIVO",
+        subtitle: "Inadimplência, Recuperação e Desempenho da Cobrança",
         sync: "🔄 Sincronizar Dados",
         errorLoading: "⚠️ Ocorreu um erro ao carregar as métricas: ",
         kpiVolumeAtRisk: "Volume em Risco",

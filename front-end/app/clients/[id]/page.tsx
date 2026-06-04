@@ -195,7 +195,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   // Use the fetched profile risk score from the database if available; fallback to overdue heuristic if unavailable
   const computedScore = typeof profile.riskScore === 'number'
     ? profile.riskScore
-    : (overdueCount > 0 ? Math.min(100, 30 + overdueCount * 20) : 54.0)
+    : (overdueCount > 0 ? Math.min(100, 30 + overdueCount * 20) : 46.0)
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
