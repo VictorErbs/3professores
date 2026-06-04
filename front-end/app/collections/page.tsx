@@ -1,6 +1,7 @@
 "use client"
 import React, { useEffect, useState, useMemo, useRef } from 'react'
 import Header from '@/components/Header'
+import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -309,7 +310,12 @@ export default function CollectionsPage() {
                   {filteredQueue.map((item) => (
                     <tr key={item.clientId} className="hover:bg-slate-50/30 dark:hover:bg-slate-900/10 transition-colors duration-150">
                       <td className="px-6 py-4">
-                        <div className="font-bold text-slate-900 dark:text-white">{item.name}</div>
+                        <Link
+                          href={`/clients/${item.clientId}`}
+                          className="font-bold text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline transition"
+                        >
+                          {item.name}
+                        </Link>
                         <div className="text-xs text-slate-400 mt-0.5">{isSyntheticEmail(item.email) ? 'Dados de contato nao estao no XLSX' : t('collections.cpfLabel', { cpf: item.cpf, phone: item.phone })}</div>
                       </td>
                       <td className="px-6 py-4 font-bold text-rose-600 dark:text-rose-400">
