@@ -579,10 +579,10 @@ export default function DashboardPage() {
                       
                       <div className="space-y-4">
                         {[
-                          { name: 'FÊNIX', rate: 58.40 },
-                          { name: 'ACERTA', rate: 48.72 },
-                          { name: 'NEXUS', rate: 41.36 },
-                          { name: 'VÉRTICE', rate: 33.95 }
+                          { name: 'FÊNIX', rate: 38.31 },
+                          { name: 'ACERTA', rate: 36.65 },
+                          { name: 'NEXUS', rate: 34.95 },
+                          { name: 'VÉRTICE', rate: 29.51 }
                         ].map((item) => (
                           <div key={item.name} className="space-y-1">
                             <div className="flex justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
@@ -625,10 +625,10 @@ export default function DashboardPage() {
 
                       <div className="space-y-3.5">
                         {[
-                          { name: 'FÊNIX', sent: 5.12, rec: 2.99 },
-                          { name: 'ACERTA', sent: 4.89, rec: 2.38 },
-                          { name: 'NEXUS', sent: 4.13, rec: 1.71 },
-                          { name: 'VÉRTICE', sent: 3.28, rec: 1.12 }
+                          { name: 'FÊNIX', sent: 5.12, rec: 1.96 },
+                          { name: 'ACERTA', sent: 4.89, rec: 1.79 },
+                          { name: 'NEXUS', sent: 4.13, rec: 1.44 },
+                          { name: 'VÉRTICE', sent: 3.28, rec: 0.97 }
                         ].map((item) => {
                           const scale = 6.0
                           const sentWidth = (item.sent / scale) * 100
