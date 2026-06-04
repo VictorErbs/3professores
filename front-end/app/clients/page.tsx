@@ -98,18 +98,7 @@ export default function ClientsListPage() {
   }
 
   useEffect(() => {
-    const checkAuth = async () => {
-      if (!db.isMock()) {
-        const supabase = createClient()
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-          router.push('/login')
-          return
-        }
-      }
-      fetchClients()
-    }
-    checkAuth()
+    fetchClients()
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [])
 

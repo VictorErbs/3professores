@@ -1,5 +1,5 @@
-import LoginForm from '@/features/auth/LoginForm';
+import { redirect } from 'next/navigation'
 
 export default function LoginPage() {
-  return <LoginForm />;
+  redirect('/')
 }

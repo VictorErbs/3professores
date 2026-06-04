@@ -21,6 +21,66 @@ function toDate(value: unknown) {
   return Number.isNaN(d.getTime()) ? null : d
 }
 
+async function fetchAllInstallments(supabase: any): Promise<any[]> {
+  const { count, error: countErr } = await supabase
+    .from('installments')
+    .select('*', { count: 'exact', head: true })
+  if (countErr) throw countErr
+  if (!count) return []
+
+  const batchSize = 1000
+  const concurrency = 15
+  const results: any[] = []
+  const offsets: number[] = []
+  for (let offset = 0; offset < count; offset += batchSize) {
+    offsets.push(offset)
+  }
+
+  for (let i = 0; i < offsets.length; i += concurrency) {
+    const chunk = offsets.slice(i, i + concurrency)
+    const promises = chunk.map(offset => 
+      supabase
+        .from('installments')
+        .select('due_date, amount, status')
+        .range(offset, offset + batchSize - 1)
+        .then((res: any) => {
+          if (res.error) throw res.error
+          return res.data || []
+        })
+    )
+    const chunks = await Promise.all(promises)
+    results.push(...chunks.flat())
+  }
+  return results
+}
+
+async function fetchAllSourceRows(supabase: any): Promise<any[]> {
+  const { count, error: countErr } = await supabase
+    .from('source_cobranca_assessorias')
+    .select('*', { count: 'exact', head: true })
+  if (countErr) throw countErr
+  if (!count) return []
+
+  const batchSize = 1000
+  const results: any[] = []
+  const promises = []
+  for (let offset = 0; offset < count; offset += batchSize) {
+    promises.push(
+      supabase
+        .from('source_cobranca_assessorias')
+        .select('raw')
+        .range(offset, offset + batchSize - 1)
+        .then((res: any) => {
+          if (res.error) throw res.error
+          return res.data || []
+        })
+    )
+  }
+  const chunks = await Promise.all(promises)
+  results.push(...chunks.flat())
+  return results
+}
+
 export async function GET() {
   try {
     if (!db.isMock()) {
@@ -30,24 +90,94 @@ export async function GET() {
       }
     }
 
-    // Fetch all operational data
-    const clients = await db.clients.list()
-    const contracts = await db.contracts.list()
-    let installments = await db.installments.list()
-    const shouldFallback = installments.length === 0 && !db.isMock()
-    if (shouldFallback) {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL
-      const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-      if (supabaseUrl && supabaseServiceRoleKey) {
-        const supabase = createSupabaseClient(supabaseUrl, supabaseServiceRoleKey, { auth: { persistSession: false } })
-        const { data } = await supabase.from('installments').select('*')
-        if (data) {
-          installments = data as typeof installments
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const isRealDb = !db.isMock() && supabaseUrl && supabaseServiceRoleKey
+
+    let clients: any[] = []
+    let contracts: any[] = []
+    let installments: any[] = []
+    let alerts: any[] = []
+    let riskScores: any[] = []
+    let totalActiveContracts = 0
+    let criticalClientsCount = 0
+    let activeAlerts: any[] = []
+
+    if (isRealDb) {
+      const supabase = createSupabaseClient(supabaseUrl!, supabaseServiceRoleKey!, { auth: { persistSession: false } })
+      
+      // 1. Fetch total count of contracts
+      const { count: contractsCount } = await supabase
+        .from('contracts')
+        .select('*', { count: 'exact', head: true })
+      totalActiveContracts = contractsCount || 0
+
+      // 2. Fetch count of critical clients (score >= 70)
+      const { count: criticalCount } = await supabase
+        .from('risk_scores')
+        .select('*', { count: 'exact', head: true })
+        .gte('score', 70)
+      criticalClientsCount = criticalCount || 0
+
+      // 3. Fetch active alerts (limit to 5)
+      const { data: alertsData } = await supabase
+        .from('alerts')
+        .select('*')
+        .eq('resolved', false)
+        .order('created_at', { ascending: false })
+        .limit(5)
+      
+      activeAlerts = alertsData || []
+      
+      if (activeAlerts.length > 0) {
+        const clientIds = activeAlerts.map(a => a.client_id)
+        const { data: clientsData } = await supabase
+          .from('clients')
+          .select('id, name')
+          .in('id', clientIds)
+        const clientMap = new Map(clientsData?.map(c => [c.id, c.name]) || [])
+        activeAlerts.forEach((alert: any) => {
+          alert.clientName = clientMap.get(alert.client_id) || 'Cliente Desconhecido'
+        })
+      }
+
+      // 4. Fetch all installments
+      installments = await fetchAllInstallments(supabase)
+    } else {
+      // Mock fallback mode
+      clients = await db.clients.list()
+      contracts = await db.contracts.list()
+      installments = await db.installments.list()
+      alerts = await db.alerts.list()
+      riskScores = await db.risk_scores.list()
+
+      totalActiveContracts = contracts.length
+
+      let criticalCount = 0
+      const latestByClient = new Map<string, number>()
+      for (const score of riskScores) {
+        if (!latestByClient.has(score.client_id)) {
+          latestByClient.set(score.client_id, Number(score.score) || 0)
         }
       }
+      for (const [, score] of latestByClient.entries()) {
+        if (score >= 70) {
+          criticalCount++
+        }
+      }
+      criticalClientsCount = criticalCount
+
+      activeAlerts = alerts
+        .filter(a => !a.resolved)
+        .map(alert => {
+          const client = clients.find(c => c.id === alert.client_id)
+          return {
+            ...alert,
+            clientName: client?.name || 'Cliente Desconhecido'
+          }
+        })
+        .slice(0, 5)
     }
-    const alerts = await db.alerts.list()
-    const riskScores = await db.risk_scores.list()
 
     // 1. Calculate top KPIs
     const overdueInstallments = installments.filter(inst => inst.status === 'overdue')
@@ -68,33 +198,6 @@ export async function GET() {
     const recoveryRate = (totalPaidAmount + totalOverdueAmount) > 0
       ? (totalPaidAmount / (totalPaidAmount + totalOverdueAmount)) * 100
       : 0
-
-    // Compute latest risk score for each client in-memory (single query already loaded)
-    let criticalClientsCount = 0
-    const latestByClient = new Map<string, number>()
-    for (const score of riskScores) {
-      if (!latestByClient.has(score.client_id)) {
-        latestByClient.set(score.client_id, Number(score.score) || 0)
-      }
-    }
-
-    for (const [, score] of latestByClient.entries()) {
-      if (score >= 70) {
-        criticalClientsCount++
-      }
-    }
-
-    // 2. Active Alertas Feed (resolved = false)
-    const activeAlerts = alerts
-      .filter(a => !a.resolved)
-      .map(alert => {
-        const client = clients.find(c => c.id === alert.client_id)
-        return {
-          ...alert,
-          clientName: client?.name || 'Cliente Desconhecido'
-        }
-      })
-      .slice(0, 5) // Limit to top 5 recent
 
     // 3. Projeção de Fluxo de Caixa para os próximos 6 meses
     const today = new Date()
@@ -172,24 +275,22 @@ export async function GET() {
 
     // === [NEW] 4. KPI Average Delay, Regional Risk and Time Trends ===
     let finalAverageDelay = 67
-    const regionalStats: Array<{ region: string; riskRate: number; averageScore: number; volumeAtRisk: number }> = []
+    const regionalStats: Array<{ region: string; riskRate: number; averageScore: number; volumeAtRisk: number; averageDelay: number }> = []
     let highestDelinquencyRegion = 'Sudeste'
     let highestRiskRegion = 'Nordeste'
 
     // Grouping structure for regional aggregation
-    const regionMap = new Map<string, { totalRisk: number; countRisk: number; totalAmount: number; countAmount: number; collectionCount: number; collectionOverdueCount: number }>()
+    const regionMap = new Map<string, { totalRisk: number; countRisk: number; totalAmount: number; countAmount: number; collectionCount: number; collectionOverdueCount: number; totalDelay: number; delayCount: number }>()
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL
-    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    // Advisory (assessoria) aggregation
+    const advisoryMap = new Map<string, { contractCount: number; totalSent: number; recoveredCount: number; recoveredAmount: number; totalDelay: number; delayCount: number; totalRisk: number; riskCount: number }>()
 
     if (!db.isMock() && supabaseUrl && supabaseServiceRoleKey) {
       try {
         const supabase = createSupabaseClient(supabaseUrl, supabaseServiceRoleKey, { auth: { persistSession: false } })
         
-        // Fetch raw CSV rows
-        const { data: sourceRows } = await supabase
-          .from('source_cobranca_assessorias')
-          .select('raw')
+        // Fetch raw CSV rows using pagination
+        const sourceRows = await fetchAllSourceRows(supabase)
 
         let totalDelay = 0
         let delayCount = 0
@@ -215,6 +316,12 @@ export async function GET() {
               delayCount++
             }
 
+            const amountStr = getVal(['Valor_Inadimplente_Inicial', 'Initial_Delinquent_Amount', 'Valor_Inadimplente', 'Amount'])
+            const amountVal = amountStr !== null ? toNumber(amountStr) : 0
+
+            const statusStr = getVal(['Status_Cobranca', 'Collection_Status', 'Status'])
+            const isOverdue = statusStr ? ['em aberto', 'insucesso', 'ajuizado', 'overdue', 'failed', 'legal'].includes(String(statusStr).toLowerCase()) : true
+
             // 2. Region
             let regionStr = getVal(['Regiao_Cliente', 'Customer_Region', 'Regiao', 'Region'])
             if (regionStr) {
@@ -230,12 +337,6 @@ export async function GET() {
               const riskScoreStr = getVal(['Score_Interno_Risco', 'Risk_Score', 'Score', 'Risco'])
               const riskScoreVal = riskScoreStr !== null ? Number(riskScoreStr) : null
 
-              const amountStr = getVal(['Valor_Inadimplente_Inicial', 'Initial_Delinquent_Amount', 'Valor_Inadimplente', 'Amount'])
-              const amountVal = amountStr !== null ? toNumber(amountStr) : 0
-
-              const statusStr = getVal(['Status_Cobranca', 'Collection_Status', 'Status'])
-              const isOverdue = statusStr ? ['em aberto', 'insucesso', 'ajuizado', 'overdue', 'failed', 'legal'].includes(String(statusStr).toLowerCase()) : true
-
               if (!regionMap.has(normalizedRegion)) {
                 regionMap.set(normalizedRegion, {
                   totalRisk: 0,
@@ -243,7 +344,9 @@ export async function GET() {
                   totalAmount: 0,
                   countAmount: 0,
                   collectionCount: 0,
-                  collectionOverdueCount: 0
+                  collectionOverdueCount: 0,
+                  totalDelay: 0,
+                  delayCount: 0
                 })
               }
               const stats = regionMap.get(normalizedRegion)!
@@ -258,6 +361,52 @@ export async function GET() {
               stats.collectionCount++
               if (isOverdue) {
                 stats.collectionOverdueCount++
+              }
+              if (delayVal !== null && !Number.isNaN(delayVal) && delayVal >= 0) {
+                stats.totalDelay += delayVal
+                stats.delayCount++
+              }
+            }
+
+            // 3. Advisory (Assessoria) aggregation
+            let advisoryStr = getVal(['Nome_Assessoria', 'Advisory_Name', 'Assessoria'])
+            if (advisoryStr) {
+              advisoryStr = String(advisoryStr).trim().toUpperCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+              if (!advisoryMap.has(advisoryStr)) {
+                advisoryMap.set(advisoryStr, {
+                  contractCount: 0,
+                  totalSent: 0,
+                  recoveredCount: 0,
+                  recoveredAmount: 0,
+                  totalDelay: 0,
+                  delayCount: 0,
+                  totalRisk: 0,
+                  riskCount: 0
+                })
+              }
+              const advStats = advisoryMap.get(advisoryStr)!
+              advStats.contractCount++
+              if (amountVal > 0) advStats.totalSent += amountVal
+
+              const statusSuccessSet = ['acordo firmado', 'acordo pago', 'pago', 'recuperado', 'quitado', 'sucesso']
+              const statusStrLower = statusStr ? String(statusStr).toLowerCase().trim() : ''
+              if (statusSuccessSet.includes(statusStrLower)) {
+                advStats.recoveredCount++
+                advStats.recoveredAmount += amountVal
+              }
+
+              if (delayVal !== null && !Number.isNaN(delayVal) && delayVal >= 0) {
+                advStats.totalDelay += delayVal
+                advStats.delayCount++
+              }
+
+              const riskScoreStr2 = getVal(['Score_Interno_Risco', 'Risk_Score', 'Score', 'Risco'])
+              const riskScoreVal2 = riskScoreStr2 !== null ? Number(riskScoreStr2) : null
+              if (riskScoreVal2 !== null && !Number.isNaN(riskScoreVal2)) {
+                advStats.totalRisk += riskScoreVal2
+                advStats.riskCount++
               }
             }
           }
@@ -279,11 +428,14 @@ export async function GET() {
       const avgRisk = stats.countRisk > 0 ? Math.round(stats.totalRisk / stats.countRisk) : 0
       const delinquencyRate = stats.collectionCount > 0 ? Math.round((stats.collectionOverdueCount / stats.collectionCount) * 100) : 0
       
+      const avgDelay = stats.delayCount > 0 ? Math.round(stats.totalDelay / stats.delayCount) : 0
+
       regionalStats.push({
         region: regionName,
         riskRate: delinquencyRate,
         averageScore: avgRisk,
-        volumeAtRisk: Math.round(stats.totalAmount)
+        volumeAtRisk: Math.round(stats.totalAmount),
+        averageDelay: avgDelay
       })
 
       if (stats.totalAmount > maxDelinquencyVal) {
@@ -300,16 +452,67 @@ export async function GET() {
     regionalStats.sort((a, b) => b.riskRate - a.riskRate)
 
     if (regionalStats.length === 0) {
-      regionalStats.push(
-        { region: 'Sudeste', riskRate: 42, averageScore: 58, volumeAtRisk: 145200 },
-        { region: 'Nordeste', riskRate: 31, averageScore: 49, volumeAtRisk: 89400 },
-        { region: 'Centro-Oeste', riskRate: 25, averageScore: 43, volumeAtRisk: 52100 },
-        { region: 'Sul', riskRate: 15, averageScore: 32, volumeAtRisk: 28900 },
-        { region: 'Norte', riskRate: 12, averageScore: 28, volumeAtRisk: 14300 }
-      )
-      highestDelinquencyRegion = 'Sudeste'
-      highestRiskRegion = 'Sudeste'
+      highestDelinquencyRegion = ''
+      highestRiskRegion = ''
     }
+
+    // === Advisory (Assessoria) Stats Processing ===
+    interface AdvisoryStatEntry {
+      name: string
+      contractCount: number
+      totalSent: number
+      recoveredAmount: number
+      recoveredCount: number
+      recoveryRate: number
+      averageDelay: number
+      averageRiskScore: number
+      difficultyFactor: number
+      adjustedEfficiency: number
+    }
+
+    const advisoryStats: AdvisoryStatEntry[] = []
+
+    if (advisoryMap.size > 0) {
+      // Compute per-advisory metrics
+      const rawEntries: Array<{ name: string; contractCount: number; totalSent: number; recoveredAmount: number; recoveredCount: number; avgDelay: number; avgRisk: number }> = []
+      for (const [name, stats] of advisoryMap.entries()) {
+        rawEntries.push({
+          name,
+          contractCount: stats.contractCount,
+          totalSent: Math.round(stats.totalSent),
+          recoveredAmount: Math.round(stats.recoveredAmount),
+          recoveredCount: stats.recoveredCount,
+          avgDelay: stats.delayCount > 0 ? stats.totalDelay / stats.delayCount : 0,
+          avgRisk: stats.riskCount > 0 ? stats.totalRisk / stats.riskCount : 0
+        })
+      }
+
+      // Compute global averages for difficulty factor
+      const globalAvgDelay = rawEntries.reduce((s, e) => s + e.avgDelay, 0) / rawEntries.length || 1
+      const globalAvgRisk = rawEntries.reduce((s, e) => s + e.avgRisk, 0) / rawEntries.length || 1
+
+      for (const entry of rawEntries) {
+        const recoveryRate = entry.totalSent > 0 ? (entry.recoveredAmount / entry.totalSent) * 100 : 0
+        const difficultyFactor = ((entry.avgDelay / globalAvgDelay) + (entry.avgRisk / globalAvgRisk)) / 2
+        const adjustedEfficiency = recoveryRate * difficultyFactor
+
+        advisoryStats.push({
+          name: entry.name,
+          contractCount: entry.contractCount,
+          totalSent: entry.totalSent,
+          recoveredAmount: entry.recoveredAmount,
+          recoveredCount: entry.recoveredCount,
+          recoveryRate: Math.round(recoveryRate * 100) / 100,
+          averageDelay: Math.round(entry.avgDelay),
+          averageRiskScore: Math.round(entry.avgRisk * 100) / 100,
+          difficultyFactor: Math.round(difficultyFactor * 100) / 100,
+          adjustedEfficiency: Math.round(adjustedEfficiency * 100) / 100
+        })
+      }
+    }
+
+    // Sort by adjusted efficiency descending for ranking
+    const advisoryRanking = [...advisoryStats].sort((a, b) => b.adjustedEfficiency - a.adjustedEfficiency)
 
     // Temporal Monthly Trend Aggregation (last 6 months)
     const monthsNameShort = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -385,22 +588,7 @@ export async function GET() {
       }
     })
 
-    // Self-healing: if expectedBilling is 0 across all months, fill with gorgeous mock trend data
-    const totalExpectedTrend = temporalTrend.reduce((sum, t) => sum + t.expectedBilling, 0)
-    if (totalExpectedTrend === 0) {
-      const mockExpected = [45000, 52000, 49000, 55000, 62000, 58000]
-      const mockRecovered = [42000, 48000, 43000, 49000, 53000, 48000]
-      const mockOverdueCount = [2, 3, 4, 3, 5, 4]
-      const mockOverdueVol = [3000, 4000, 6000, 6000, 9000, 10000]
-      
-      for (let i = 0; i < temporalTrend.length; i++) {
-        temporalTrend[i].expectedBilling = mockExpected[i]
-        temporalTrend[i].recoveredAmount = mockRecovered[i]
-        temporalTrend[i].latePaymentsCount = mockOverdueCount[i]
-        temporalTrend[i].delinquencyVolume = mockOverdueVol[i]
-        temporalTrend[i].delinquencyRate = Math.round((mockOverdueVol[i] / mockExpected[i]) * 100)
-      }
-    }
+
 
     return NextResponse.json({
       kpis: {
@@ -408,7 +596,7 @@ export async function GET() {
         delinquencyRate: Math.round(delinquencyRate * 10) / 10,
         recoveryRate: Math.round(recoveryRate * 10) / 10,
         criticalClients: criticalClientsCount,
-        totalActiveContracts: contracts.length,
+        totalActiveContracts: totalActiveContracts,
         averageDelay: finalAverageDelay
       },
       alerts: activeAlerts,
@@ -417,7 +605,9 @@ export async function GET() {
       regionalStats,
       temporalTrend,
       highestDelinquencyRegion,
-      highestRiskRegion
+      highestRiskRegion,
+      advisoryStats,
+      advisoryRanking
     })
 
   } catch (error: any) {

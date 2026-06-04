@@ -33,6 +33,19 @@ interface ProjectionData {
   worst: number
 }
 
+interface AdvisoryData {
+  name: string
+  contractCount: number
+  totalSent: number
+  recoveredAmount: number
+  recoveredCount: number
+  recoveryRate: number
+  averageDelay: number
+  averageRiskScore: number
+  difficultyFactor: number
+  adjustedEfficiency: number
+}
+
 export default function DashboardPage() {
   const { t } = useTranslation()
   const router = useRouter()
@@ -46,6 +59,9 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<'billing' | 'delinquency' | 'trend'>('billing')
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null)
   const [hoveredMonth, setHoveredMonth] = useState<string | null>(null)
+  const [advisoryStats, setAdvisoryStats] = useState<AdvisoryData[]>([])
+  const [advisoryRanking, setAdvisoryRanking] = useState<AdvisoryData[]>([])
+  const [hoveredChartBar, setHoveredChartBar] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -62,6 +78,8 @@ export default function DashboardPage() {
       setTemporalTrend(data.temporalTrend || [])
       setHighestDelinquencyRegion(data.highestDelinquencyRegion || 'Sudeste')
       setHighestRiskRegion(data.highestRiskRegion || 'Sudeste')
+      setAdvisoryStats(data.advisoryStats || [])
+      setAdvisoryRanking(data.advisoryRanking || [])
       setError('')
     } catch (e) {
       setError((e as Error).message || 'Erro de conexão')
@@ -71,18 +89,7 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    const checkAuth = async () => {
-      if (!db.isMock()) {
-        const supabase = createClient()
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-          router.push('/login')
-          return
-        }
-      }
-      fetchDashboardData()
-    }
-    checkAuth()
+    fetchDashboardData()
   }, [])
 
   const handleResolveAlert = async (alertId: string) => {
@@ -837,6 +844,509 @@ export default function DashboardPage() {
               </div>
             </div>
 
+            {/* Advanced Portfolio Analytics Section */}
+            <div className="mt-10 pt-10 border-t border-slate-200 dark:border-slate-800 space-y-6 sm:space-y-8">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>📊</span> Relatórios Avançados de Performance e Cobrança
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Métricas analíticas avançadas e ranqueamentos consolidados da carteira.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
+                
+                {/* Chart 1: Valor Inadimplente por Região */}
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 transition hover:shadow-md">
+                  <div className="mb-4">
+                    <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Valor Inadimplente por Região</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Total inadimplente exposto por região geográfica.</p>
+                  </div>
+                  <div className="relative pt-2">
+                    {(() => {
+                      const maxVal = Math.max(...regionalStats.map(r => r.volumeAtRisk), 1000)
+                      return (
+                        <svg viewBox="0 0 400 240" className="w-full h-auto overflow-visible">
+                          {/* Y-Axis Grid Lines & Labels */}
+                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+                            const yVal = 180 - ratio * 140
+                            const amount = Math.round(ratio * maxVal)
+                            return (
+                              <g key={i} className="opacity-40 dark:opacity-20">
+                                <line x1="55" y1={yVal} x2="380" y2={yVal} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="1" strokeDasharray="3 3" />
+                                <text x="48" y={yVal + 4} textAnchor="end" className="text-[9px] font-bold fill-slate-400 dark:fill-slate-500">
+                                  R$ {amount >= 1000 ? `${(amount / 1000).toFixed(0)}k` : amount}
+                                </text>
+                              </g>
+                            )
+                          })}
+                          {/* Bars */}
+                          {regionalStats.map((item, idx) => {
+                            const barWidth = 28
+                            const colWidth = 325 / (regionalStats.length || 1)
+                            const x = 65 + idx * colWidth + (colWidth - barWidth) / 2
+                            const barHeight = (item.volumeAtRisk / maxVal) * 140
+                            const y = 180 - barHeight
+                            const isHovered = hoveredChartBar === `c1-${idx}`
+
+                            return (
+                              <g
+                                key={item.region}
+                                className="cursor-pointer"
+                                onMouseEnter={() => setHoveredChartBar(`c1-${idx}`)}
+                                onMouseLeave={() => setHoveredChartBar(null)}
+                              >
+                                <rect
+                                  x={x}
+                                  y={y}
+                                  width={barWidth}
+                                  height={barHeight}
+                                  rx="4"
+                                  className="transition-all duration-300"
+                                  fill="url(#c1Grad)"
+                                  opacity={isHovered ? 1 : 0.8}
+                                />
+                                <text x={x + barWidth / 2} y="196" textAnchor="middle" className="text-[10px] font-bold fill-slate-500 dark:fill-slate-400">
+                                  {item.region}
+                                </text>
+                                {/* Tooltip */}
+                                {isHovered && (
+                                  <g className="pointer-events-none drop-shadow-md">
+                                    <rect x={x + barWidth / 2 - 60} y={y - 32} width="120" height="24" rx="4" className="fill-slate-900 dark:fill-white" />
+                                    <text x={x + barWidth / 2} y={y - 17} textAnchor="middle" className="text-[9px] font-bold fill-white dark:fill-slate-900">
+                                      R$ {item.volumeAtRisk.toLocaleString('pt-BR')}
+                                    </text>
+                                  </g>
+                                )}
+                              </g>
+                            )
+                          })}
+                          {/* Gradient */}
+                          <defs>
+                            <linearGradient id="c1Grad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#f59e0b" />
+                              <stop offset="100%" stopColor="#ef4444" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+                      )
+                    })()}
+                  </div>
+                </div>
+
+                {/* Chart 2: Tendência Temporal da Inadimplência */}
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 transition hover:shadow-md">
+                  <div className="mb-4">
+                    <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Tendência Temporal</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Evolução mensal do volume financeiro inadimplente.</p>
+                  </div>
+                  <div className="relative pt-2">
+                    {(() => {
+                      const maxVal = Math.max(...temporalTrend.map(t => t.delinquencyVolume), 1000)
+                      const points = temporalTrend.map((m, idx) => {
+                        const colWidth = 320 / (temporalTrend.length - 1 || 1)
+                        const x = 65 + idx * colWidth
+                        const y = 180 - (m.delinquencyVolume / maxVal) * 140
+                        return { x, y, month: m.month, val: m.delinquencyVolume }
+                      })
+                      const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+                      const areaD = points.length > 0
+                        ? `${pathD} L ${points[points.length - 1].x} 180 L ${points[0].x} 180 Z`
+                        : ''
+
+                      return (
+                        <svg viewBox="0 0 400 240" className="w-full h-auto overflow-visible">
+                          {/* Y-Axis Grid Lines & Labels */}
+                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+                            const yVal = 180 - ratio * 140
+                            const amount = Math.round(ratio * maxVal)
+                            return (
+                              <g key={i} className="opacity-40 dark:opacity-20">
+                                <line x1="55" y1={yVal} x2="380" y2={yVal} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="1" strokeDasharray="3 3" />
+                                <text x="48" y={yVal + 4} textAnchor="end" className="text-[9px] font-bold fill-slate-400 dark:fill-slate-500">
+                                  R$ {amount >= 1000 ? `${(amount / 1000).toFixed(0)}k` : amount}
+                                </text>
+                              </g>
+                            )
+                          })}
+                          {/* Area fill */}
+                          {areaD && <path d={areaD} fill="url(#c2AreaGrad)" className="opacity-30 dark:opacity-25" />}
+                          {/* Line path */}
+                          {pathD && <path d={pathD} fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
+                          {/* Markers */}
+                          {points.map((p, idx) => {
+                            const isHovered = hoveredChartBar === `c2-${idx}`
+                            return (
+                              <g
+                                key={p.month}
+                                className="cursor-pointer"
+                                onMouseEnter={() => setHoveredChartBar(`c2-${idx}`)}
+                                onMouseLeave={() => setHoveredChartBar(null)}
+                              >
+                                <circle
+                                  cx={p.x}
+                                  cy={p.y}
+                                  r={isHovered ? 7 : 4}
+                                  className="fill-white stroke-indigo-600 stroke-[3px] transition-all duration-200"
+                                />
+                                <text x={p.x} y="196" textAnchor="middle" className="text-[10px] font-bold fill-slate-500 dark:fill-slate-400">
+                                  {p.month}
+                                </text>
+                                {isHovered && (
+                                  <g className="pointer-events-none drop-shadow-md">
+                                    <rect x={p.x - 60} y={p.y - 32} width="120" height="24" rx="4" className="fill-slate-900 dark:fill-white" />
+                                    <text x={p.x} y={p.y - 17} textAnchor="middle" className="text-[9px] font-bold fill-white dark:fill-slate-900">
+                                      R$ {p.val.toLocaleString('pt-BR')}
+                                    </text>
+                                  </g>
+                                )}
+                              </g>
+                            )
+                          })}
+                          <defs>
+                            <linearGradient id="c2AreaGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#6366f1" />
+                              <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+                      )
+                    })()}
+                  </div>
+                </div>
+
+                {/* Chart 3: Atraso Médio por Região */}
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 transition hover:shadow-md">
+                  <div className="mb-4">
+                    <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Atraso Médio por Região</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Média de dias em atraso inicial dos contratos por região.</p>
+                  </div>
+                  <div className="relative pt-2">
+                    {(() => {
+                      const sortedRegions = [...regionalStats].sort((a, b) => b.averageDelay - a.averageDelay)
+                      const maxVal = Math.max(...sortedRegions.map(r => r.averageDelay), 30)
+                      return (
+                        <svg viewBox="0 0 400 240" className="w-full h-auto overflow-visible">
+                          {/* Y-Axis Grid Lines & Labels */}
+                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+                            const yVal = 180 - ratio * 140
+                            const val = Math.round(ratio * maxVal)
+                            return (
+                              <g key={i} className="opacity-40 dark:opacity-20">
+                                <line x1="55" y1={yVal} x2="380" y2={yVal} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="1" strokeDasharray="3 3" />
+                                <text x="48" y={yVal + 4} textAnchor="end" className="text-[9px] font-bold fill-slate-400 dark:fill-slate-500">
+                                  {val} d
+                                </text>
+                              </g>
+                            )
+                          })}
+                          {/* Bars */}
+                          {sortedRegions.map((item, idx) => {
+                            const barWidth = 28
+                            const colWidth = 325 / (sortedRegions.length || 1)
+                            const x = 65 + idx * colWidth + (colWidth - barWidth) / 2
+                            const barHeight = (item.averageDelay / maxVal) * 140
+                            const y = 180 - barHeight
+                            const isHovered = hoveredChartBar === `c3-${idx}`
+
+                            return (
+                              <g
+                                key={item.region}
+                                className="cursor-pointer"
+                                onMouseEnter={() => setHoveredChartBar(`c3-${idx}`)}
+                                onMouseLeave={() => setHoveredChartBar(null)}
+                              >
+                                <rect
+                                  x={x}
+                                  y={y}
+                                  width={barWidth}
+                                  height={barHeight}
+                                  rx="4"
+                                  className="transition-all duration-300"
+                                  fill="url(#c3Grad)"
+                                  opacity={isHovered ? 1 : 0.8}
+                                />
+                                <text x={x + barWidth / 2} y="196" textAnchor="middle" className="text-[10px] font-bold fill-slate-500 dark:fill-slate-400">
+                                  {item.region}
+                                </text>
+                                {isHovered && (
+                                  <g className="pointer-events-none drop-shadow-md">
+                                    <rect x={x + barWidth / 2 - 50} y={y - 32} width="100" height="24" rx="4" className="fill-slate-900 dark:fill-white" />
+                                    <text x={x + barWidth / 2} y={y - 17} textAnchor="middle" className="text-[9px] font-bold fill-white dark:fill-slate-900">
+                                      {item.averageDelay} dias
+                                    </text>
+                                  </g>
+                                )}
+                              </g>
+                            )
+                          })}
+                          <defs>
+                            <linearGradient id="c3Grad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#8b5cf6" />
+                              <stop offset="100%" stopColor="#d946ef" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+                      )
+                    })()}
+                  </div>
+                </div>
+
+                {/* Chart 4: Taxa de Recuperação Financeira por Assessoria */}
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 transition hover:shadow-md">
+                  <div className="mb-4">
+                    <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Taxa de Recuperação por Assessoria</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Percentual de recuperação sobre o valor enviado por assessoria.</p>
+                  </div>
+                  <div className="relative pt-2">
+                    {(() => {
+                      const maxVal = 100
+                      const sortedStats = [...advisoryStats].sort((a, b) => b.recoveryRate - a.recoveryRate)
+                      return (
+                        <svg viewBox="0 0 400 240" className="w-full h-auto overflow-visible">
+                          {/* Y-Axis Grid Lines & Labels */}
+                          {[0, 25, 50, 75, 100].map((val, i) => {
+                            const yVal = 180 - (val / 100) * 140
+                            return (
+                              <g key={i} className="opacity-40 dark:opacity-20">
+                                <line x1="55" y1={yVal} x2="380" y2={yVal} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="1" strokeDasharray="3 3" />
+                                <text x="48" y={yVal + 4} textAnchor="end" className="text-[9px] font-bold fill-slate-400 dark:fill-slate-500">
+                                  {val}%
+                                </text>
+                              </g>
+                            )
+                          })}
+                          {/* Bars */}
+                          {sortedStats.map((item, idx) => {
+                            const barWidth = 24
+                            const colWidth = 325 / (sortedStats.length || 1)
+                            const x = 65 + idx * colWidth + (colWidth - barWidth) / 2
+                            const barHeight = (item.recoveryRate / maxVal) * 140
+                            const y = 180 - barHeight
+                            const isHovered = hoveredChartBar === `c4-${idx}`
+
+                            return (
+                              <g
+                                key={item.name}
+                                className="cursor-pointer"
+                                onMouseEnter={() => setHoveredChartBar(`c4-${idx}`)}
+                                onMouseLeave={() => setHoveredChartBar(null)}
+                              >
+                                <rect
+                                  x={x}
+                                  y={y}
+                                  width={barWidth}
+                                  height={barHeight}
+                                  rx="4"
+                                  className="transition-all duration-300"
+                                  fill="url(#c4Grad)"
+                                  opacity={isHovered ? 1 : 0.8}
+                                />
+                                <text x={x + barWidth / 2} y="196" textAnchor="middle" className="text-[8px] font-bold fill-slate-500 dark:fill-slate-400">
+                                  {item.name.split(' ')[0]}
+                                </text>
+                                {isHovered && (
+                                  <g className="pointer-events-none drop-shadow-md">
+                                    <rect x={x + barWidth / 2 - 50} y={y - 32} width="100" height="24" rx="4" className="fill-slate-900 dark:fill-white" />
+                                    <text x={x + barWidth / 2} y={y - 17} textAnchor="middle" className="text-[9px] font-bold fill-white dark:fill-slate-900">
+                                      {item.recoveryRate.toFixed(2)}%
+                                    </text>
+                                  </g>
+                                )}
+                              </g>
+                            )
+                          })}
+                          <defs>
+                            <linearGradient id="c4Grad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#10b981" />
+                              <stop offset="100%" stopColor="#059669" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+                      )
+                    })()}
+                  </div>
+                </div>
+
+                {/* Chart 5: Valor Enviado x Valor Recuperado por Assessoria */}
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 transition hover:shadow-md">
+                  <div className="mb-4">
+                    <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Valor Enviado vs Recuperado</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Comparativo entre os valores entregues para cobrança e recuperados.</p>
+                  </div>
+                  <div className="relative pt-2">
+                    {(() => {
+                      const maxVal = Math.max(...advisoryStats.map(a => Math.max(a.totalSent, a.recoveredAmount)), 1000)
+                      return (
+                        <svg viewBox="0 0 400 240" className="w-full h-auto overflow-visible">
+                          {/* Y-Axis Grid Lines & Labels */}
+                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+                            const yVal = 180 - ratio * 140
+                            const amount = Math.round(ratio * maxVal)
+                            return (
+                              <g key={i} className="opacity-40 dark:opacity-20">
+                                <line x1="55" y1={yVal} x2="380" y2={yVal} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="1" strokeDasharray="3 3" />
+                                <text x="48" y={yVal + 4} textAnchor="end" className="text-[9px] font-bold fill-slate-400 dark:fill-slate-500">
+                                  R$ {amount >= 1000000 ? `${(amount / 1000000).toFixed(1)}M` : amount >= 1000 ? `${(amount / 1000).toFixed(0)}k` : amount}
+                                </text>
+                              </g>
+                            )
+                          })}
+                          {/* Grouped Bars */}
+                          {advisoryStats.map((item, idx) => {
+                            const colWidth = 325 / (advisoryStats.length || 1)
+                            const barWidth = 12
+                            const xCent = 65 + idx * colWidth + colWidth / 2
+                            
+                            const sentH = (item.totalSent / maxVal) * 140
+                            const sentY = 180 - sentH
+                            const recH = (item.recoveredAmount / maxVal) * 140
+                            const recY = 180 - recH
+                            
+                            const isHovered = hoveredChartBar === `c5-${idx}`
+
+                            return (
+                              <g
+                                key={item.name}
+                                className="cursor-pointer"
+                                onMouseEnter={() => setHoveredChartBar(`c5-${idx}`)}
+                                onMouseLeave={() => setHoveredChartBar(null)}
+                              >
+                                {/* Sent Bar (Blueish) */}
+                                <rect
+                                  x={xCent - barWidth - 1}
+                                  y={sentY}
+                                  width={barWidth}
+                                  height={sentH}
+                                  rx="2"
+                                  className="transition-all duration-300"
+                                  fill="#3b82f6"
+                                  opacity={isHovered ? 1 : 0.8}
+                                />
+                                {/* Recovered Bar (Greenish) */}
+                                <rect
+                                  x={xCent + 1}
+                                  y={recY}
+                                  width={barWidth}
+                                  height={recH}
+                                  rx="2"
+                                  className="transition-all duration-300"
+                                  fill="#10b981"
+                                  opacity={isHovered ? 1 : 0.8}
+                                />
+                                <text x={xCent} y="196" textAnchor="middle" className="text-[8px] font-bold fill-slate-500 dark:fill-slate-400">
+                                  {item.name.split(' ')[0]}
+                                </text>
+                                {isHovered && (
+                                  <g className="pointer-events-none drop-shadow-md">
+                                    <rect x={xCent - 75} y={Math.min(sentY, recY) - 46} width="150" height="38" rx="6" className="fill-slate-900 dark:fill-white" />
+                                    <text x={xCent} y={Math.min(sentY, recY) - 32} textAnchor="middle" className="text-[9px] font-bold fill-white dark:fill-slate-900">
+                                      Env: R$ {item.totalSent.toLocaleString('pt-BR')}
+                                    </text>
+                                    <text x={xCent} y={Math.min(sentY, recY) - 18} textAnchor="middle" className="text-[9px] font-black fill-emerald-400 dark:fill-emerald-600">
+                                      Rec: R$ {item.recoveredAmount.toLocaleString('pt-BR')}
+                                    </text>
+                                  </g>
+                                )}
+                              </g>
+                            )
+                          })}
+                        </svg>
+                      )
+                    })()}
+                    {/* Chart Legend */}
+                    <div className="flex justify-center gap-4 mt-2 text-[10px] font-bold">
+                      <div className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 bg-blue-500 rounded" />
+                        <span className="text-slate-500">Valor Enviado</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 bg-emerald-500 rounded" />
+                        <span className="text-slate-500">Valor Recuperado</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Chart 6: Ranking de Eficiência Ajustada pelo Risco */}
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 transition hover:shadow-md">
+                  <div className="mb-4">
+                    <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Ranking de Eficiência Ajustada</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Eficiência ponderada pela dificuldade da carteira (atraso e score).</p>
+                  </div>
+                  <div className="relative pt-2">
+                    {(() => {
+                      const maxVal = Math.max(...advisoryRanking.map(a => a.adjustedEfficiency), 1)
+                      return (
+                        <svg viewBox="0 0 400 240" className="w-full h-auto overflow-visible">
+                          {/* Y-Axis Grid Lines & Labels */}
+                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+                            const yVal = 180 - ratio * 140
+                            const val = (ratio * maxVal).toFixed(1)
+                            return (
+                              <g key={i} className="opacity-40 dark:opacity-20">
+                                <line x1="55" y1={yVal} x2="380" y2={yVal} stroke="rgba(148, 163, 184, 0.3)" strokeWidth="1" strokeDasharray="3 3" />
+                                <text x="48" y={yVal + 4} textAnchor="end" className="text-[9px] font-bold fill-slate-400 dark:fill-slate-500">
+                                  {val}
+                                </text>
+                              </g>
+                            )
+                          })}
+                          {/* Bars */}
+                          {advisoryRanking.map((item, idx) => {
+                            const barWidth = 24
+                            const colWidth = 325 / (advisoryRanking.length || 1)
+                            const x = 65 + idx * colWidth + (colWidth - barWidth) / 2
+                            const barHeight = (item.adjustedEfficiency / maxVal) * 140
+                            const y = 180 - barHeight
+                            const isHovered = hoveredChartBar === `c6-${idx}`
+
+                            return (
+                              <g
+                                key={item.name}
+                                className="cursor-pointer"
+                                onMouseEnter={() => setHoveredChartBar(`c6-${idx}`)}
+                                onMouseLeave={() => setHoveredChartBar(null)}
+                              >
+                                <rect
+                                  x={x}
+                                  y={y}
+                                  width={barWidth}
+                                  height={barHeight}
+                                  rx="4"
+                                  className="transition-all duration-300"
+                                  fill="url(#c6Grad)"
+                                  opacity={isHovered ? 1 : 0.8}
+                                />
+                                <text x={x + barWidth / 2} y="196" textAnchor="middle" className="text-[8px] font-bold fill-slate-500 dark:fill-slate-400">
+                                  {item.name.split(' ')[0]}
+                                </text>
+                                {isHovered && (
+                                  <g className="pointer-events-none drop-shadow-md">
+                                    <rect x={x + barWidth / 2 - 50} y={y - 32} width="100" height="24" rx="4" className="fill-slate-900 dark:fill-white" />
+                                    <text x={x + barWidth / 2} y={y - 17} textAnchor="middle" className="text-[9px] font-bold fill-white dark:fill-slate-900">
+                                      Índice: {item.adjustedEfficiency.toFixed(2)}
+                                    </text>
+                                  </g>
+                                )}
+                              </g>
+                            )
+                          })}
+                          <defs>
+                            <linearGradient id="c6Grad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#3b82f6" />
+                              <stop offset="100%" stopColor="#8b5cf6" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+                      )
+                    })()}
+                  </div>
+                </div>
+
+              </div>
+            </div>
 
           </>
         ) : null}

@@ -65,18 +65,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   }
 
   useEffect(() => {
-    const checkAuth = async () => {
-      if (!db.isMock()) {
-        const supabase = createClient()
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-          router.push('/login')
-          return
-        }
-      }
-      fetchProfile()
-    }
-    checkAuth()
+    fetchProfile()
   }, [id])
 
   // Recalibrate score in real-time

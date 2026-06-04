@@ -29,9 +29,41 @@ export async function POST(req: Request) {
     const contracts = await db.contracts.getByClient(clientId)
     const contractIds = contracts.map(c => c.id)
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
     // Fetch all installments for client's contracts
-    const allInstallments = await db.installments.list()
-    const clientInstallments = allInstallments.filter(inst => contractIds.includes(inst.contract_id))
+    let clientInstallments: any[] = []
+    if (contractIds.length > 0) {
+      if (!db.isMock() && supabaseUrl && supabaseServiceRoleKey) {
+        const supabase = createSupabaseClient(supabaseUrl, supabaseServiceRoleKey, { auth: { persistSession: false } })
+        const { data, error } = await supabase
+          .from('installments')
+          .select('*')
+          .in('contract_id', contractIds)
+        if (error) throw error
+        clientInstallments = data || []
+      } else {
+        const allInstallments = await db.installments.list()
+        clientInstallments = allInstallments.filter(inst => contractIds.includes(inst.contract_id))
+      }
+    }
+
+    // Fetch client alerts (resolved === false) to avoid full list scan
+    let clientAlerts: any[] = []
+    if (!db.isMock() && supabaseUrl && supabaseServiceRoleKey) {
+      const supabase = createSupabaseClient(supabaseUrl, supabaseServiceRoleKey, { auth: { persistSession: false } })
+      const { data, error } = await supabase
+        .from('alerts')
+        .select('*')
+        .eq('client_id', clientId)
+        .eq('resolved', false)
+      if (error) throw error
+      clientAlerts = data || []
+    } else {
+      const allAlerts = await db.alerts.list()
+      clientAlerts = allAlerts.filter(a => a.client_id === clientId && a.resolved === false)
+    }
 
     const overdueInstallments = clientInstallments.filter(inst => inst.status === 'overdue')
     const overdueCount = overdueInstallments.length
@@ -52,8 +84,6 @@ export async function POST(req: Request) {
 
     // Check if any contract is contemplated (Rule 5 & RF 03)
     let isContemplated = false
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL
-    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!db.isMock() && supabaseUrl && supabaseServiceRoleKey && contracts.length > 0) {
       try {
         const supabase = createSupabaseClient(supabaseUrl, supabaseServiceRoleKey, { auth: { persistSession: false } })
@@ -90,8 +120,6 @@ export async function POST(req: Request) {
       }
     } else {
       // Check if client had previous alerts, adjust base score accordingly
-      const allAlerts = await db.alerts.list()
-      const clientAlerts = allAlerts.filter(a => a.client_id === clientId && a.resolved === false)
       if (clientAlerts.length > 0) {
         score = 25
       }
@@ -120,8 +148,7 @@ export async function POST(req: Request) {
     })
 
     // Check if critical/medium alerts are already generated
-    const allAlerts = await db.alerts.list()
-    const activeClientAlert = allAlerts.find(a => a.client_id === clientId && a.severity === severity && !a.resolved)
+    const activeClientAlert = clientAlerts.find(a => a.severity === severity)
 
     if (!activeClientAlert && severity !== 'low') {
       const primaryContractId = contractIds[0] || null
